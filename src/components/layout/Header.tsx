@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogOut, Shield, User } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const slogans = [
   "The ultimate marketplace for MU Online...",
@@ -12,6 +21,8 @@ const slogans = [
 const Header = () => {
   const [currentSlogan, setCurrentSlogan] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, isAdmin, signOut, isLoading } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -20,14 +31,21 @@ const Header = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full glass-card border-b border-border/30">
       <div className="container flex items-center justify-between h-16 px-4">
         {/* Logo */}
         <div className="flex items-center gap-4">
-          <h1 className="font-display text-2xl md:text-3xl font-bold text-gradient-gold">
-            MU Online Hub
-          </h1>
+          <button onClick={() => navigate('/')} className="flex items-center gap-4">
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-gradient-gold">
+              MU Online Hub
+            </h1>
+          </button>
           <div className="hidden md:block overflow-hidden max-w-[300px]">
             <p 
               key={currentSlogan}
@@ -46,9 +64,42 @@ const Header = () => {
           <Button variant="ghost" className="btn-fantasy-outline">
             Support
           </Button>
-          <Button className="btn-fantasy-primary">
-            Log in
-          </Button>
+
+          {!isLoading && (
+            <>
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button className="btn-fantasy-secondary gap-2">
+                      <User size={16} />
+                      {user.email?.split('@')[0]}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <User size={16} className="mr-2" />
+                      My Dashboard
+                    </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate('/admin')}>
+                        <Shield size={16} className="mr-2" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                      <LogOut size={16} className="mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button className="btn-fantasy-primary" onClick={() => navigate('/auth')}>
+                  Log in
+                </Button>
+              )}
+            </>
+          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -69,9 +120,32 @@ const Header = () => {
           <Button variant="ghost" className="w-full justify-start">
             Support
           </Button>
-          <Button className="btn-fantasy-primary w-full">
-            Log in
-          </Button>
+          {!isLoading && (
+            <>
+              {user ? (
+                <>
+                  <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/dashboard')}>
+                    <User size={16} className="mr-2" />
+                    My Dashboard
+                  </Button>
+                  {isAdmin && (
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/admin')}>
+                      <Shield size={16} className="mr-2" />
+                      Admin Panel
+                    </Button>
+                  )}
+                  <Button variant="ghost" className="w-full justify-start text-destructive" onClick={handleSignOut}>
+                    <LogOut size={16} className="mr-2" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button className="btn-fantasy-primary w-full" onClick={() => navigate('/auth')}>
+                  Log in
+                </Button>
+              )}
+            </>
+          )}
         </nav>
       )}
     </header>

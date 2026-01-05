@@ -41,8 +41,8 @@ const Index = () => {
 
         {/* Rotating Promo Bars */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <RotatingPromos type="discounts" />
-          <RotatingPromos type="events" />
+          <RotatingPromos type="discount" />
+          <RotatingPromos type="event" />
         </div>
 
         {/* Main Content Grid */}
