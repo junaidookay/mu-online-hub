@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
@@ -14,10 +14,11 @@ import {
   Loader2, 
   Server,
   Megaphone,
-  Edit2,
-  ExternalLink
+  ExternalLink,
+  Crown
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { ImageUpload } from '@/components/upload/ImageUpload';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ServerType = Tables<'servers'>;
@@ -40,6 +41,18 @@ const Dashboard = () => {
     ad_type: 'marketplace' as 'marketplace' | 'services',
     title: '', description: '', website: '', banner_url: ''
   });
+
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    // Check for payment success
+    if (searchParams.get('payment') === 'success') {
+      toast({
+        title: 'Payment Successful!',
+        description: 'Your premium feature has been activated.',
+      });
+    }
+  }, [searchParams, toast]);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -242,19 +255,26 @@ const Dashboard = () => {
                   />
                 </div>
                 <div>
-                  <Label>Banner URL</Label>
-                  <Input
-                    placeholder="https://..."
-                    value={newServer.banner_url}
-                    onChange={(e) => setNewServer({ ...newServer, banner_url: e.target.value })}
-                    className="bg-muted/50"
+                  <Label>Banner Image</Label>
+                  <ImageUpload
+                    bucket="server-banners"
+                    userId={user.id}
+                    onUploadComplete={(url) => setNewServer({ ...newServer, banner_url: url })}
+                    currentImageUrl={newServer.banner_url}
+                    aspectRatio="468x60"
                   />
                 </div>
               </div>
-              <Button onClick={handleAddServer} className="btn-fantasy-primary gap-2">
-                <Plus size={16} />
-                Add Server
-              </Button>
+              <div className="flex gap-3">
+                <Button onClick={handleAddServer} className="btn-fantasy-primary gap-2">
+                  <Plus size={16} />
+                  Add Server
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/pricing')} className="gap-2">
+                  <Crown size={16} />
+                  Go Premium
+                </Button>
+              </div>
             </div>
 
             <div className="glass-card p-6">
@@ -354,12 +374,13 @@ const Dashboard = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <Label>Banner URL (268x60 recommended)</Label>
-                  <Input
-                    placeholder="https://..."
-                    value={newAd.banner_url}
-                    onChange={(e) => setNewAd({ ...newAd, banner_url: e.target.value })}
-                    className="bg-muted/50"
+                  <Label>Banner Image (268x60 recommended)</Label>
+                  <ImageUpload
+                    bucket="ad-banners"
+                    userId={user.id}
+                    onUploadComplete={(url) => setNewAd({ ...newAd, banner_url: url })}
+                    currentImageUrl={newAd.banner_url}
+                    aspectRatio="268x60"
                   />
                 </div>
               </div>
