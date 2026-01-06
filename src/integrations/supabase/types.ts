@@ -134,6 +134,54 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string
+          currency: string
+          duration_days: number
+          id: string
+          metadata: Json | null
+          product_id: string | null
+          product_type: string
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          duration_days: number
+          id?: string
+          metadata?: Json | null
+          product_id?: string | null
+          product_type: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          duration_days?: number
+          id?: string
+          metadata?: Json | null
+          product_id?: string | null
+          product_type?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       premium_banners: {
         Row: {
           created_at: string
@@ -206,6 +254,45 @@ export type Database = {
           user_id?: string
           version?: string
           website?: string
+        }
+        Relationships: []
+      }
+      pricing_packages: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          duration_days: number
+          features: string[] | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_cents: number
+          product_type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          duration_days: number
+          features?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_cents: number
+          product_type: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          duration_days?: number
+          features?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_cents?: number
+          product_type?: string
         }
         Relationships: []
       }
