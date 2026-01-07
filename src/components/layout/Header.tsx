@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Menu, X, LogOut, Shield, User } from 'lucide-react';
+import { Menu, X, LogOut, Shield, User, Crown } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -58,8 +58,9 @@ const Header = () => {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-2">
-          <Button variant="ghost" className="btn-fantasy-outline">
-            MU Online Guides
+          <Button variant="ghost" className="btn-fantasy-outline" onClick={() => navigate('/pricing')}>
+            <Crown size={16} className="mr-1" />
+            Premium
           </Button>
           <Button variant="ghost" className="btn-fantasy-outline">
             Support
@@ -114,8 +115,9 @@ const Header = () => {
       {/* Mobile Navigation */}
       {isMenuOpen && (
         <nav className="md:hidden flex flex-col gap-2 p-4 border-t border-border/30 animate-fade-in">
-          <Button variant="ghost" className="w-full justify-start">
-            MU Online Guides
+          <Button variant="ghost" className="w-full justify-start" onClick={() => navigate('/pricing')}>
+            <Crown size={16} className="mr-2" />
+            Premium
           </Button>
           <Button variant="ghost" className="w-full justify-start">
             Support
