@@ -14,6 +14,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_clicks: {
+        Row: {
+          ad_id: string
+          clicked_at: string
+          id: string
+        }
+        Insert: {
+          ad_id: string
+          clicked_at?: string
+          id?: string
+        }
+        Update: {
+          ad_id?: string
+          clicked_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_clicks_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advertisements: {
         Row: {
           ad_type: Database["public"]["Enums"]["ad_type"]
@@ -362,6 +388,7 @@ export type Database = {
       servers: {
         Row: {
           banner_url: string | null
+          click_count: number | null
           created_at: string
           exp_rate: string
           expires_at: string | null
@@ -380,6 +407,7 @@ export type Database = {
         }
         Insert: {
           banner_url?: string | null
+          click_count?: number | null
           created_at?: string
           exp_rate: string
           expires_at?: string | null
@@ -398,6 +426,7 @@ export type Database = {
         }
         Update: {
           banner_url?: string | null
+          click_count?: number | null
           created_at?: string
           exp_rate?: string
           expires_at?: string | null
