@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signUp = async (email: string, password: string, displayName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -97,6 +97,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         },
       },
     });
+
+    // Send welcome email on successful signup
+    if (!error && data.user) {
+      supabase.functions.invoke('send-email', {
+        body: {
+          type: 'welcome',
+          to: email,
+          data: {
+            name: displayName || email.split('@')[0],
+            siteUrl: window.location.origin,
+          },
+        },
+      }).catch(console.error);
+    }
 
     return { error: error as Error | null };
   };

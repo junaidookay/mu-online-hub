@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { SEOHead } from '@/components/SEOHead';
 import { z } from 'zod';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 
@@ -96,6 +97,10 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <SEOHead 
+        title="Sign In - MU Online Hub"
+        description="Sign in to your MU Online Hub account to manage your servers and advertisements."
+      />
       <div className="w-full max-w-md">
         <div className="glass-card p-8">
           <div className="text-center mb-8">

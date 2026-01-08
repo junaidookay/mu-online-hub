@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SEOHead } from '@/components/SEOHead';
 import { 
   Plus, 
   Trash2, 
@@ -254,6 +255,10 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead 
+        title="Admin Dashboard - MU Online Hub"
+        description="Manage banners, partners, projects, and promos for MU Online Hub."
+      />
       <div className="container py-6">
         <div className="flex items-center gap-4 mb-8">
           <Button variant="ghost" onClick={() => navigate('/')} className="gap-2">

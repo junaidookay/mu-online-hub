@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { ImageUpload } from '@/components/upload/ImageUpload';
+import { SEOHead } from '@/components/SEOHead';
 import { Loader2, Save, ArrowLeft, User } from 'lucide-react';
 
 interface ProfileData {
@@ -99,6 +100,10 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead 
+        title="My Profile - MU Online Hub"
+        description="Edit your MU Online Hub profile settings, display name, and avatar."
+      />
       <Header />
       <div className="container py-8 max-w-2xl">
         <Button 
