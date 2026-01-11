@@ -124,6 +124,153 @@ export type Database = {
         }
         Relationships: []
       }
+      listing_packages: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          duration_days: number
+          features: string[] | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_cents: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          duration_days: number
+          features?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_cents: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          duration_days?: number
+          features?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_cents?: number
+        }
+        Relationships: []
+      }
+      listing_purchases: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string
+          currency: string | null
+          duration_days: number
+          id: string
+          listing_id: string
+          package_id: string | null
+          status: string | null
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string
+          currency?: string | null
+          duration_days: number
+          id?: string
+          listing_id: string
+          package_id?: string | null
+          status?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string
+          currency?: string | null
+          duration_days?: number
+          id?: string
+          listing_id?: string
+          package_id?: string | null
+          status?: string | null
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_purchases_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_purchases_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "listing_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listings: {
+        Row: {
+          category: Database["public"]["Enums"]["seller_category"]
+          created_at: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_published: boolean | null
+          price_usd: number | null
+          published_at: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["seller_category"]
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_published?: boolean | null
+          price_usd?: number | null
+          published_at?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["seller_category"]
+          created_at?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_published?: boolean | null
+          price_usd?: number | null
+          published_at?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       partners: {
         Row: {
           created_at: string
@@ -331,6 +478,7 @@ export type Database = {
           id: string
           updated_at: string
           user_id: string
+          user_type: Database["public"]["Enums"]["user_type"] | null
         }
         Insert: {
           avatar_url?: string | null
@@ -340,6 +488,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Update: {
           avatar_url?: string | null
@@ -349,6 +498,7 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type"] | null
         }
         Relationships: []
       }
@@ -382,6 +532,27 @@ export type Database = {
           link?: string | null
           promo_type?: string
           text?: string
+        }
+        Relationships: []
+      }
+      seller_categories: {
+        Row: {
+          category: Database["public"]["Enums"]["seller_category"]
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["seller_category"]
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["seller_category"]
+          created_at?: string
+          id?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -483,6 +654,13 @@ export type Database = {
     Enums: {
       ad_type: "marketplace" | "services"
       app_role: "admin" | "moderator" | "user"
+      seller_category:
+        | "websites"
+        | "server_files"
+        | "antihack"
+        | "launchers"
+        | "custom_scripts"
+      user_type: "buyer" | "seller"
       vip_level: "none" | "gold" | "diamond"
     }
     CompositeTypes: {
@@ -613,6 +791,14 @@ export const Constants = {
     Enums: {
       ad_type: ["marketplace", "services"],
       app_role: ["admin", "moderator", "user"],
+      seller_category: [
+        "websites",
+        "server_files",
+        "antihack",
+        "launchers",
+        "custom_scripts",
+      ],
+      user_type: ["buyer", "seller"],
       vip_level: ["none", "gold", "diamond"],
     },
   },
