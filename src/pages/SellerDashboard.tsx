@@ -1,0 +1,288 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { SEOHead } from '@/components/SEOHead';
+import Header from '@/components/layout/Header';
+import { 
+  Plus, Package, Eye, EyeOff, Trash2, Edit, 
+  Globe, FileCode, Shield, Rocket, Code, Loader2,
+  CreditCard
+} from 'lucide-react';
+
+const categoryIcons: Record<string, any> = {
+  websites: Globe,
+  server_files: FileCode,
+  antihack: Shield,
+  launchers: Rocket,
+  custom_scripts: Code,
+};
+
+const categoryLabels: Record<string, string> = {
+  websites: 'Websites',
+  server_files: 'Server Files',
+  antihack: 'Antihack',
+  launchers: 'Launchers',
+  custom_scripts: 'Custom Scripts',
+};
+
+interface Listing {
+  id: string;
+  title: string;
+  description: string | null;
+  category: string;
+  price_usd: number | null;
+  is_published: boolean;
+  is_active: boolean;
+  expires_at: string | null;
+  image_url: string | null;
+}
+
+interface SellerCategory {
+  category: string;
+}
+
+const SellerDashboard = () => {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>('all');
+  const { user, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
+
+  const fetchData = async () => {
+    if (!user) return;
+    setIsLoading(true);
+
+    // Fetch seller categories
+    const { data: catData } = await supabase
+      .from('seller_categories')
+      .select('category')
+      .eq('user_id', user.id);
+
+    if (catData) {
+      setCategories(catData.map((c: SellerCategory) => c.category));
+    }
+
+    // Fetch listings
+    const { data: listingsData } = await supabase
+      .from('listings')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (listingsData) {
+      setListings(listingsData);
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase
+      .from('listings')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Deleted', description: 'Listing removed successfully' });
+      fetchData();
+    }
+  };
+
+  const filteredListings = activeTab === 'all' 
+    ? listings 
+    : listings.filter(l => l.category === activeTab);
+
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (categories.length === 0) {
+    navigate('/seller-onboarding');
+    return null;
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <SEOHead 
+        title="Seller Dashboard - MU Online Hub"
+        description="Manage your listings and track your sales on MU Online Hub."
+      />
+      <Header />
+
+      <main className="container py-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="font-display text-2xl md:text-3xl font-bold text-gradient-gold">
+              Seller Dashboard
+            </h1>
+            <p className="text-muted-foreground">Manage your listings and publish to marketplace</p>
+          </div>
+          <Button asChild className="btn-fantasy-primary">
+            <Link to="/seller-dashboard/create">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Listing
+            </Link>
+          </Button>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <Button
+            variant={activeTab === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('all')}
+          >
+            All ({listings.length})
+          </Button>
+          {categories.map(cat => {
+            const Icon = categoryIcons[cat] || Package;
+            const count = listings.filter(l => l.category === cat).length;
+            return (
+              <Button
+                key={cat}
+                variant={activeTab === cat ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveTab(cat)}
+                className="flex items-center gap-2"
+              >
+                <Icon className="w-4 h-4" />
+                {categoryLabels[cat]} ({count})
+              </Button>
+            );
+          })}
+        </div>
+
+        {/* Listings Grid */}
+        {filteredListings.length === 0 ? (
+          <Card className="glass-card">
+            <CardContent className="py-12 text-center">
+              <Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-display text-lg font-semibold mb-2">No Listings Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first listing to start selling on the marketplace.
+              </p>
+              <Button asChild className="btn-fantasy-primary">
+                <Link to="/seller-dashboard/create">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Listing
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredListings.map(listing => {
+              const Icon = categoryIcons[listing.category] || Package;
+              const isExpired = listing.expires_at && new Date(listing.expires_at) < new Date();
+              
+              return (
+                <Card key={listing.id} className="glass-card overflow-hidden">
+                  {listing.image_url && (
+                    <div className="aspect-video overflow-hidden">
+                      <img 
+                        src={listing.image_url} 
+                        alt={listing.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-primary" />
+                        <Badge variant="outline" className="text-xs">
+                          {categoryLabels[listing.category]}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {listing.is_published ? (
+                          <Badge className="bg-green-500/20 text-green-400 border-green-500/50">
+                            <Eye className="w-3 h-3 mr-1" />
+                            Live
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            <EyeOff className="w-3 h-3 mr-1" />
+                            Draft
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <CardTitle className="text-base mt-2">{listing.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {listing.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                        {listing.description}
+                      </p>
+                    )}
+                    {listing.price_usd && (
+                      <p className="text-lg font-bold text-primary mb-3">
+                        ${listing.price_usd.toFixed(2)}
+                      </p>
+                    )}
+                    {listing.expires_at && (
+                      <p className={`text-xs mb-3 ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {isExpired ? 'Expired' : `Expires: ${new Date(listing.expires_at).toLocaleDateString()}`}
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" asChild className="flex-1">
+                        <Link to={`/seller-dashboard/edit/${listing.id}`}>
+                          <Edit className="w-4 h-4 mr-1" />
+                          Edit
+                        </Link>
+                      </Button>
+                      {!listing.is_published && (
+                        <Button size="sm" asChild className="flex-1 btn-fantasy-primary">
+                          <Link to={`/seller-dashboard/publish/${listing.id}`}>
+                            <CreditCard className="w-4 h-4 mr-1" />
+                            Publish
+                          </Link>
+                        </Button>
+                      )}
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleDelete(listing.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default SellerDashboard;

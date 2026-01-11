@@ -1,22 +1,29 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { SEOHead } from '@/components/SEOHead';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ShoppingCart, Store } from 'lucide-react';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
 type AuthMode = 'login' | 'signup' | 'forgot';
+type UserType = 'buyer' | 'seller';
 
 const Auth = () => {
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [searchParams] = useSearchParams();
+  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
+  const initialType = searchParams.get('type') === 'seller' ? 'seller' : 'buyer';
+
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [userType, setUserType] = useState<UserType>(initialType);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -31,9 +38,35 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && !isLoading) {
+      // Check if user is a seller without categories (needs onboarding)
+      checkSellerStatus(user.id);
+    }
+  }, [user, isLoading]);
+
+  const checkSellerStatus = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('user_id', userId)
+      .single();
+
+    if (profile?.user_type === 'seller') {
+      // Check if seller has categories
+      const { data: categories } = await supabase
+        .from('seller_categories')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1);
+
+      if (!categories || categories.length === 0) {
+        navigate('/seller-onboarding');
+        return;
+      }
+      navigate('/seller-dashboard');
+    } else {
       navigate('/');
     }
-  }, [user, isLoading, navigate]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,15 +104,33 @@ const Auth = () => {
         const { error } = await signIn(email, password);
         if (error) {
           toast({ title: 'Login Failed', description: error.message, variant: 'destructive' });
-        } else {
-          navigate('/');
         }
+        // Navigation handled in useEffect after user state updates
       } else {
         const { error } = await signUp(email, password, displayName);
         if (error) {
           toast({ title: 'Sign Up Failed', description: error.message, variant: 'destructive' });
         } else {
-          navigate('/');
+          // If seller, update profile and redirect to onboarding
+          if (userType === 'seller') {
+            // Profile will be created by trigger, but we need to update user_type
+            // This will happen after the user confirms email or auto-confirm
+            toast({ 
+              title: 'Account Created!', 
+              description: 'Welcome! Setting up your seller account...' 
+            });
+            // Wait briefly for the trigger to create the profile
+            setTimeout(async () => {
+              const { data: { user: newUser } } = await supabase.auth.getUser();
+              if (newUser) {
+                await supabase
+                  .from('profiles')
+                  .update({ user_type: 'seller' })
+                  .eq('user_id', newUser.id);
+                navigate('/seller-onboarding');
+              }
+            }, 1000);
+          }
         }
       }
     } finally {
@@ -98,7 +149,7 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <SEOHead 
-        title="Sign In - MU Online Hub"
+        title={mode === 'signup' ? 'Sign Up - MU Online Hub' : 'Sign In - MU Online Hub'}
         description="Sign in to your MU Online Hub account to manage your servers and advertisements."
       />
       <div className="w-full max-w-md">
@@ -123,10 +174,50 @@ const Auth = () => {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === 'signup' && (
-                <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your display name" className="bg-muted/50" />
-                </div>
+                <>
+                  <div className="space-y-3">
+                    <Label>I want to</Label>
+                    <RadioGroup 
+                      value={userType} 
+                      onValueChange={(v) => setUserType(v as UserType)}
+                      className="grid grid-cols-2 gap-3"
+                    >
+                      <label 
+                        className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          userType === 'buyer' 
+                            ? 'border-primary bg-primary/10' 
+                            : 'border-border/50 bg-muted/20 hover:border-border'
+                        }`}
+                      >
+                        <RadioGroupItem value="buyer" className="sr-only" />
+                        <ShoppingCart className={`w-5 h-5 ${userType === 'buyer' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <div>
+                          <div className="font-semibold text-sm">Buy</div>
+                          <div className="text-xs text-muted-foreground">Browse & purchase</div>
+                        </div>
+                      </label>
+                      <label 
+                        className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                          userType === 'seller' 
+                            ? 'border-primary bg-primary/10' 
+                            : 'border-border/50 bg-muted/20 hover:border-border'
+                        }`}
+                      >
+                        <RadioGroupItem value="seller" className="sr-only" />
+                        <Store className={`w-5 h-5 ${userType === 'seller' ? 'text-primary' : 'text-muted-foreground'}`} />
+                        <div>
+                          <div className="font-semibold text-sm">Sell</div>
+                          <div className="text-xs text-muted-foreground">List your products</div>
+                        </div>
+                      </label>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="displayName">Display Name</Label>
+                    <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your display name" className="bg-muted/50" />
+                  </div>
+                </>
               )}
 
               <div className="space-y-2">
@@ -151,7 +242,7 @@ const Auth = () => {
               <Button type="submit" className="w-full btn-fantasy-primary" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 {mode === 'login' && 'Sign In'}
-                {mode === 'signup' && 'Create Account'}
+                {mode === 'signup' && (userType === 'seller' ? 'Create Seller Account' : 'Create Account')}
                 {mode === 'forgot' && 'Send Reset Link'}
               </Button>
             </form>
