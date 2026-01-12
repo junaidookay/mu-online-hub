@@ -17,9 +17,11 @@ import {
   Shield,
   Users,
   Server,
-  Megaphone
+  Megaphone,
+  BarChart3
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard';
 import type { Tables } from '@/integrations/supabase/types';
 
 type PremiumBanner = Tables<'premium_banners'>;
@@ -271,8 +273,12 @@ const Admin = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="banners" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
+        <Tabs defaultValue="analytics" className="w-full">
+          <TabsList className="grid w-full grid-cols-5 mb-6">
+            <TabsTrigger value="analytics" className="gap-2">
+              <BarChart3 size={16} />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="banners" className="gap-2">
               <Image size={16} />
               Banners
@@ -283,13 +289,18 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="projects" className="gap-2">
               <Server size={16} />
-              Arcana Projects
+              Projects
             </TabsTrigger>
             <TabsTrigger value="promos" className="gap-2">
               <Megaphone size={16} />
               Promos
             </TabsTrigger>
           </TabsList>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <AnalyticsDashboard />
+          </TabsContent>
 
           {/* Premium Banners Tab */}
           <TabsContent value="banners" className="space-y-6">

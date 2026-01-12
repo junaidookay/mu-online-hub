@@ -18,6 +18,7 @@ import ArcanaProjects from "./pages/ArcanaProjects";
 import SellerOnboarding from "./pages/SellerOnboarding";
 import SellerDashboard from "./pages/SellerDashboard";
 import CreateListing from "./pages/CreateListing";
+import EditListing from "./pages/EditListing";
 import PublishListing from "./pages/PublishListing";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/seller-onboarding" element={<SellerOnboarding />} />
             <Route path="/seller-dashboard" element={<SellerDashboard />} />
             <Route path="/seller-dashboard/create" element={<CreateListing />} />
+            <Route path="/seller-dashboard/edit/:id" element={<EditListing />} />
             <Route path="/seller-dashboard/publish/:id" element={<PublishListing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

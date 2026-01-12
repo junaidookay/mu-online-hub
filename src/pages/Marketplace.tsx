@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Store, Search, Filter, ExternalLink } from 'lucide-react';
+import { Store, Search, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useClickTracking } from '@/hooks/useClickTracking';
+import { MarketplaceListings } from '@/components/marketplace/MarketplaceListings';
 
 interface Advertisement {
   id: string;
@@ -21,9 +22,10 @@ interface Advertisement {
 const categories = [
   { id: 'all', label: 'All Products' },
   { id: 'websites', label: 'Websites' },
-  { id: 'server-files', label: 'Server Files' },
+  { id: 'server_files', label: 'Server Files' },
   { id: 'antihack', label: 'Antihack' },
-  { id: 'tools', label: 'Custom Tools' },
+  { id: 'launchers', label: 'Launchers' },
+  { id: 'custom_scripts', label: 'Custom Scripts' },
 ];
 
 const Marketplace = () => {
@@ -142,6 +144,11 @@ const Marketplace = () => {
               </div>
             </a>
           ))}
+        </div>
+
+        {/* Seller Listings */}
+        <div className="mt-8">
+          <MarketplaceListings searchQuery={searchQuery} activeCategory={activeCategory} />
         </div>
 
         {filteredAds.length === 0 && (
