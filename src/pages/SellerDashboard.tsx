@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,27 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { SEOHead } from '@/components/SEOHead';
 import Header from '@/components/layout/Header';
+import { StripeConnectCard } from '@/components/seller/StripeConnectCard';
+import { categoryIcons, categoryLabels } from '@/lib/categories';
 import { 
   Plus, Package, Eye, EyeOff, Trash2, Edit, 
-  Globe, FileCode, Shield, Rocket, Code, Loader2,
-  CreditCard
+  Loader2, CreditCard
 } from 'lucide-react';
-
-const categoryIcons: Record<string, any> = {
-  websites: Globe,
-  server_files: FileCode,
-  antihack: Shield,
-  launchers: Rocket,
-  custom_scripts: Code,
-};
-
-const categoryLabels: Record<string, string> = {
-  websites: 'Websites',
-  server_files: 'Server Files',
-  antihack: 'Antihack',
-  launchers: 'Launchers',
-  custom_scripts: 'Custom Scripts',
-};
 
 interface Listing {
   id: string;
@@ -54,6 +39,7 @@ const SellerDashboard = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -66,6 +52,15 @@ const SellerDashboard = () => {
       fetchData();
     }
   }, [user]);
+
+  // Handle Stripe callback messages
+  useEffect(() => {
+    if (searchParams.get('stripe_success') === 'true') {
+      toast({ title: 'Success', description: 'Your Stripe account has been connected!' });
+    } else if (searchParams.get('stripe_refresh') === 'true') {
+      toast({ title: 'Info', description: 'Please complete your Stripe onboarding.' });
+    }
+  }, [searchParams, toast]);
 
   const fetchData = async () => {
     if (!user) return;
@@ -140,7 +135,7 @@ const SellerDashboard = () => {
             <h1 className="font-display text-2xl md:text-3xl font-bold text-gradient-gold">
               Seller Dashboard
             </h1>
-            <p className="text-muted-foreground">Manage your listings and publish to marketplace</p>
+            <p className="text-muted-foreground">Manage your listings and earnings</p>
           </div>
           <Button asChild className="btn-fantasy-primary">
             <Link to="/seller-dashboard/create">
@@ -148,6 +143,47 @@ const SellerDashboard = () => {
               Create Listing
             </Link>
           </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          {/* Stripe Connect Card */}
+          <div className="lg:col-span-1">
+            <StripeConnectCard />
+          </div>
+
+          {/* Quick Stats */}
+          <div className="lg:col-span-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="glass-card">
+                <CardContent className="pt-6">
+                  <p className="text-2xl font-bold text-primary">{listings.length}</p>
+                  <p className="text-xs text-muted-foreground">Total Listings</p>
+                </CardContent>
+              </Card>
+              <Card className="glass-card">
+                <CardContent className="pt-6">
+                  <p className="text-2xl font-bold text-green-400">
+                    {listings.filter(l => l.is_published).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Published</p>
+                </CardContent>
+              </Card>
+              <Card className="glass-card">
+                <CardContent className="pt-6">
+                  <p className="text-2xl font-bold text-yellow-400">
+                    {listings.filter(l => !l.is_published).length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Drafts</p>
+                </CardContent>
+              </Card>
+              <Card className="glass-card">
+                <CardContent className="pt-6">
+                  <p className="text-2xl font-bold text-muted-foreground">{categories.length}</p>
+                  <p className="text-xs text-muted-foreground">Categories</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
 
         {/* Category Tabs */}
@@ -171,7 +207,7 @@ const SellerDashboard = () => {
                 className="flex items-center gap-2"
               >
                 <Icon className="w-4 h-4" />
-                {categoryLabels[cat]} ({count})
+                {categoryLabels[cat] || cat} ({count})
               </Button>
             );
           })}
@@ -216,7 +252,7 @@ const SellerDashboard = () => {
                       <div className="flex items-center gap-2">
                         <Icon className="w-4 h-4 text-primary" />
                         <Badge variant="outline" className="text-xs">
-                          {categoryLabels[listing.category]}
+                          {categoryLabels[listing.category] || listing.category}
                         </Badge>
                       </div>
                       <div className="flex items-center gap-1">

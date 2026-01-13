@@ -476,6 +476,8 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          stripe_account_id: string | null
+          stripe_onboarding_complete: boolean | null
           updated_at: string
           user_id: string
           user_type: Database["public"]["Enums"]["user_type"] | null
@@ -486,6 +488,8 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          stripe_account_id?: string | null
+          stripe_onboarding_complete?: boolean | null
           updated_at?: string
           user_id: string
           user_type?: Database["public"]["Enums"]["user_type"] | null
@@ -496,6 +500,8 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          stripe_account_id?: string | null
+          stripe_onboarding_complete?: boolean | null
           updated_at?: string
           user_id?: string
           user_type?: Database["public"]["Enums"]["user_type"] | null
@@ -660,6 +666,22 @@ export type Database = {
         | "antihack"
         | "launchers"
         | "custom_scripts"
+        | "mu_websites"
+        | "mu_server_files"
+        | "mu_protection"
+        | "mu_app_developer"
+        | "mu_launchers"
+        | "mu_installers"
+        | "mu_hosting"
+        | "server_development"
+        | "design_branding"
+        | "skins_customization"
+        | "media"
+        | "promotion"
+        | "streaming"
+        | "content_creators"
+        | "event_master"
+        | "marketing_growth"
       user_type: "buyer" | "seller"
       vip_level: "none" | "gold" | "diamond"
     }
@@ -797,6 +819,22 @@ export const Constants = {
         "antihack",
         "launchers",
         "custom_scripts",
+        "mu_websites",
+        "mu_server_files",
+        "mu_protection",
+        "mu_app_developer",
+        "mu_launchers",
+        "mu_installers",
+        "mu_hosting",
+        "server_development",
+        "design_branding",
+        "skins_customization",
+        "media",
+        "promotion",
+        "streaming",
+        "content_creators",
+        "event_master",
+        "marketing_growth",
       ],
       user_type: ["buyer", "seller"],
       vip_level: ["none", "gold", "diamond"],

@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Store, Search, ExternalLink } from 'lucide-react';
+import { Store, Search, ExternalLink, Briefcase } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import { MarketplaceListings } from '@/components/marketplace/MarketplaceListings';
+import { marketplaceCategories, serviceCategories } from '@/lib/categories';
 
 interface Advertisement {
   id: string;
@@ -19,19 +21,11 @@ interface Advertisement {
   vip_level: 'none' | 'gold' | 'diamond' | null;
 }
 
-const categories = [
-  { id: 'all', label: 'All Products' },
-  { id: 'websites', label: 'Websites' },
-  { id: 'server_files', label: 'Server Files' },
-  { id: 'antihack', label: 'Antihack' },
-  { id: 'launchers', label: 'Launchers' },
-  { id: 'custom_scripts', label: 'Custom Scripts' },
-];
-
 const Marketplace = () => {
   const [ads, setAds] = useState<Advertisement[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState('marketplace');
   const { trackAdClick } = useClickTracking();
 
   useEffect(() => {
@@ -53,12 +47,14 @@ const Marketplace = () => {
     ad.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const currentCategories = activeTab === 'marketplace' ? marketplaceCategories : serviceCategories;
+
   return (
     <div className="min-h-screen bg-background">
       <SEOHead 
-        title="MU Online Marketplace - Digital Products & Server Files"
-        description="Browse the ultimate marketplace for MU Online digital products. Find premium websites, server files, antihack solutions, and custom tools from verified sellers."
-        keywords="MU Online marketplace, server files, antihack, MU websites, custom tools"
+        title="MU Online Marketplace - Digital Products & Services"
+        description="Browse the ultimate marketplace for MU Online digital products and services. Find premium websites, server files, development services, and more from verified sellers."
+        keywords="MU Online marketplace, server files, antihack, MU websites, custom tools, services"
       />
       <Header />
       
@@ -70,95 +66,164 @@ const Marketplace = () => {
             MU Online Marketplace
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
-            Discover premium digital products for your MU Online server. From complete website packages 
-            to server files, antihack solutions, and custom development tools.
+            Discover premium digital products and professional services for your MU Online server. 
+            From complete website packages to development services and marketing solutions.
           </p>
           <Button asChild className="btn-fantasy-primary">
-            <Link to="/pricing">Advertise Your Product</Link>
+            <Link to="/seller-onboarding">Start Selling</Link>
           </Button>
         </div>
 
-        {/* Search & Filter */}
-        <div className="glass-card p-4 mb-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {categories.map((cat) => (
-                <Button
-                  key={cat.id}
-                  variant={activeCategory === cat.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={activeCategory === cat.id ? "btn-fantasy-primary" : "btn-fantasy-outline"}
-                >
-                  {cat.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* Marketplace/Services Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2">
+            <TabsTrigger value="marketplace" className="flex items-center gap-2">
+              <Store className="w-4 h-4" />
+              MU Marketplace
+            </TabsTrigger>
+            <TabsTrigger value="services" className="flex items-center gap-2">
+              <Briefcase className="w-4 h-4" />
+              MU Services
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredAds.map((ad) => (
-            <a
-              key={ad.id}
-              href={ad.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackAdClick(ad.id, ad.website)}
-              className="glass-card overflow-hidden group hover:glow-border-gold transition-all"
-            >
-              {ad.banner_url && (
-                <div className="aspect-video relative overflow-hidden">
-                  <img 
-                    src={ad.banner_url} 
-                    alt={ad.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+          <TabsContent value="marketplace" className="mt-6">
+            {/* Search & Filter */}
+            <div className="glass-card p-4 mb-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
                   />
-                  {ad.vip_level && ad.vip_level !== 'none' && (
-                    <Badge className={`absolute top-2 right-2 ${ad.vip_level === 'diamond' ? 'vip-diamond' : 'vip-gold'}`}>
-                      {ad.vip_level.toUpperCase()}
-                    </Badge>
-                  )}
                 </div>
-              )}
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {ad.title}
-                  </h3>
-                  <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant={activeCategory === 'all' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveCategory('all')}
+                    className={activeCategory === 'all' ? "btn-fantasy-primary" : "btn-fantasy-outline"}
+                  >
+                    All
+                  </Button>
+                  {marketplaceCategories.map((cat) => (
+                    <Button
+                      key={cat.id}
+                      variant={activeCategory === cat.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActiveCategory(cat.id)}
+                      className={activeCategory === cat.id ? "btn-fantasy-primary" : "btn-fantasy-outline"}
+                    >
+                      <cat.icon className="w-3 h-3 mr-1" />
+                      {cat.label}
+                    </Button>
+                  ))}
                 </div>
-                {ad.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{ad.description}</p>
-                )}
               </div>
-            </a>
-          ))}
-        </div>
+            </div>
 
-        {/* Seller Listings */}
-        <div className="mt-8">
-          <MarketplaceListings searchQuery={searchQuery} activeCategory={activeCategory} />
-        </div>
+            {/* Sponsored Ads */}
+            {filteredAds.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold mb-3 text-muted-foreground">Sponsored</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredAds.map((ad) => (
+                    <a
+                      key={ad.id}
+                      href={ad.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackAdClick(ad.id, ad.website)}
+                      className="glass-card overflow-hidden group hover:glow-border-gold transition-all"
+                    >
+                      {ad.banner_url && (
+                        <div className="aspect-video relative overflow-hidden">
+                          <img 
+                            src={ad.banner_url} 
+                            alt={ad.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          {ad.vip_level && ad.vip_level !== 'none' && (
+                            <Badge className={`absolute top-2 right-2 ${ad.vip_level === 'diamond' ? 'vip-diamond' : 'vip-gold'}`}>
+                              {ad.vip_level.toUpperCase()}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {ad.title}
+                          </h3>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        {ad.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2">{ad.description}</p>
+                        )}
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {filteredAds.length === 0 && (
-          <div className="glass-card p-8 text-center">
-            <p className="text-muted-foreground mb-4">No products found matching your search.</p>
-            <Button asChild className="btn-fantasy-primary">
-              <Link to="/pricing">Be the first to advertise!</Link>
-            </Button>
-          </div>
-        )}
+            {/* Seller Listings */}
+            <MarketplaceListings 
+              searchQuery={searchQuery} 
+              activeCategory={activeCategory} 
+              categoryType="marketplace"
+            />
+          </TabsContent>
+
+          <TabsContent value="services" className="mt-6">
+            {/* Search & Filter for Services */}
+            <div className="glass-card p-4 mb-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search services..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant={activeCategory === 'all' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveCategory('all')}
+                    className={activeCategory === 'all' ? "btn-fantasy-primary" : "btn-fantasy-outline"}
+                  >
+                    All
+                  </Button>
+                  {serviceCategories.map((cat) => (
+                    <Button
+                      key={cat.id}
+                      variant={activeCategory === cat.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActiveCategory(cat.id)}
+                      className={activeCategory === cat.id ? "btn-fantasy-primary" : "btn-fantasy-outline"}
+                    >
+                      <cat.icon className="w-3 h-3 mr-1" />
+                      {cat.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Service Listings */}
+            <MarketplaceListings 
+              searchQuery={searchQuery} 
+              activeCategory={activeCategory}
+              categoryType="services" 
+            />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

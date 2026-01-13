@@ -6,17 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { SEOHead } from '@/components/SEOHead';
-import { Loader2, Globe, FileCode, Shield, Rocket, Code } from 'lucide-react';
-
-const categories = [
-  { id: 'websites', label: 'Websites', icon: Globe, description: 'MU Online website templates and custom designs' },
-  { id: 'server_files', label: 'Server Files', icon: FileCode, description: 'Complete server packages and files' },
-  { id: 'antihack', label: 'Antihack', icon: Shield, description: 'Security and protection systems' },
-  { id: 'launchers', label: 'Launchers', icon: Rocket, description: 'Custom game launchers' },
-  { id: 'custom_scripts', label: 'Custom Scripts', icon: Code, description: 'Custom modifications and scripts' },
-] as const;
-
-type CategoryId = typeof categories[number]['id'];
+import { Loader2, Store, Briefcase } from 'lucide-react';
+import { marketplaceCategories, serviceCategories, type CategoryId } from '@/lib/categories';
 
 const SellerOnboarding = () => {
   const [selectedCategories, setSelectedCategories] = useState<CategoryId[]>([]);
@@ -68,60 +59,107 @@ const SellerOnboarding = () => {
 
       toast({ title: 'Success', description: 'Welcome! You are now a seller.' });
       navigate('/seller-dashboard');
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
+    <div className="min-h-screen bg-background px-4 py-12">
       <SEOHead 
         title="Become a Seller - MU Online Hub"
         description="Choose your categories and start selling on MU Online Hub marketplace."
       />
-      <div className="w-full max-w-2xl">
+      <div className="max-w-4xl mx-auto">
         <div className="glass-card p-8">
           <div className="text-center mb-8">
             <h1 className="font-display text-3xl font-bold text-gradient-gold mb-2">
               Choose Your Categories
             </h1>
             <p className="text-muted-foreground">
-              Select the categories you want to sell in. You can choose multiple.
+              Select the categories you want to sell in. You can choose from both Marketplace and Services.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            {categories.map((category) => {
-              const isSelected = selectedCategories.includes(category.id);
-              return (
-                <div
-                  key={category.id}
-                  onClick={() => toggleCategory(category.id)}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                    isSelected
-                      ? 'border-primary bg-primary/10 glow-border-gold'
-                      : 'border-border/50 bg-muted/20 hover:border-border'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <Checkbox 
-                      checked={isSelected} 
-                      className="mt-1"
-                      onCheckedChange={() => toggleCategory(category.id)}
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <category.icon className={`w-5 h-5 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                        <span className="font-semibold text-foreground">{category.label}</span>
+          {/* Marketplace Categories */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Store className="w-5 h-5 text-primary" />
+              <h2 className="font-display text-xl font-semibold">MU Marketplace</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {marketplaceCategories.map((category) => {
+                const isSelected = selectedCategories.includes(category.id);
+                return (
+                  <div
+                    key={category.id}
+                    onClick={() => toggleCategory(category.id)}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 glow-border-gold'
+                        : 'border-border/50 bg-muted/20 hover:border-border'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <Checkbox 
+                        checked={isSelected} 
+                        className="mt-1"
+                        onCheckedChange={() => toggleCategory(category.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <category.icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <span className="font-semibold text-sm text-foreground truncate">{category.label}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{category.description}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground">{category.description}</p>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Services Categories */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Briefcase className="w-5 h-5 text-primary" />
+              <h2 className="font-display text-xl font-semibold">MU Services</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {serviceCategories.map((category) => {
+                const isSelected = selectedCategories.includes(category.id);
+                return (
+                  <div
+                    key={category.id}
+                    onClick={() => toggleCategory(category.id)}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-primary bg-primary/10 glow-border-gold'
+                        : 'border-border/50 bg-muted/20 hover:border-border'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <Checkbox 
+                        checked={isSelected} 
+                        className="mt-1"
+                        onCheckedChange={() => toggleCategory(category.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <category.icon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <span className="font-semibold text-sm text-foreground truncate">{category.label}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{category.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <Button 
