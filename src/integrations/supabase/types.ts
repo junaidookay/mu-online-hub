@@ -170,6 +170,7 @@ export type Database = {
           id: string
           listing_id: string
           package_id: string | null
+          seller_id: string | null
           status: string | null
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
@@ -184,6 +185,7 @@ export type Database = {
           id?: string
           listing_id: string
           package_id?: string | null
+          seller_id?: string | null
           status?: string | null
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -198,6 +200,7 @@ export type Database = {
           id?: string
           listing_id?: string
           package_id?: string | null
+          seller_id?: string | null
           status?: string | null
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -508,6 +511,63 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          is_verified_purchase: boolean | null
+          listing_id: string
+          purchase_id: string | null
+          rating: number
+          reviewer_id: string
+          seller_id: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_verified_purchase?: boolean | null
+          listing_id: string
+          purchase_id?: string | null
+          rating: number
+          reviewer_id: string
+          seller_id: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          is_verified_purchase?: boolean | null
+          listing_id?: string
+          purchase_id?: string | null
+          rating?: number
+          reviewer_id?: string
+          seller_id?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "listing_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rotating_promos: {
         Row: {
           created_at: string
@@ -561,6 +621,63 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      seller_payouts: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          id: string
+          listing_id: string | null
+          net_amount_cents: number
+          paid_at: string | null
+          platform_fee_cents: number | null
+          purchase_id: string | null
+          status: string | null
+          stripe_transfer_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          net_amount_cents: number
+          paid_at?: string | null
+          platform_fee_cents?: number | null
+          purchase_id?: string | null
+          status?: string | null
+          stripe_transfer_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          id?: string
+          listing_id?: string | null
+          net_amount_cents?: number
+          paid_at?: string | null
+          platform_fee_cents?: number | null
+          purchase_id?: string | null
+          status?: string | null
+          stripe_transfer_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_payouts_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_payouts_purchase_id_fkey"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "listing_purchases"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       servers: {
         Row: {
@@ -639,6 +756,54 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_stats: {
+        Row: {
+          badges: string[] | null
+          buyer_level: number | null
+          buyer_xp: number | null
+          created_at: string
+          id: string
+          purchases_count: number | null
+          sales_count: number | null
+          seller_level: number | null
+          seller_xp: number | null
+          total_earned_cents: number | null
+          total_spent_cents: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          badges?: string[] | null
+          buyer_level?: number | null
+          buyer_xp?: number | null
+          created_at?: string
+          id?: string
+          purchases_count?: number | null
+          sales_count?: number | null
+          seller_level?: number | null
+          seller_xp?: number | null
+          total_earned_cents?: number | null
+          total_spent_cents?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          badges?: string[] | null
+          buyer_level?: number | null
+          buyer_xp?: number | null
+          created_at?: string
+          id?: string
+          purchases_count?: number | null
+          sales_count?: number | null
+          seller_level?: number | null
+          seller_xp?: number | null
+          total_earned_cents?: number | null
+          total_spent_cents?: number | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

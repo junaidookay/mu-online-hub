@@ -57,10 +57,16 @@ serve(async (req) => {
     const { listingId, successUrl, cancelUrl }: CheckoutRequest = await req.json();
     console.log("Listing checkout request:", { listingId, userId: user.id });
 
+    // Create admin client to fetch seller profile
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
     // Fetch listing details
     const { data: listing, error: listingError } = await supabaseClient
       .from("listings")
-      .select("*, profiles!listings_user_id_fkey(display_name, email)")
+      .select("*")
       .eq("id", listingId)
       .eq("is_published", true)
       .single();
@@ -78,6 +84,17 @@ serve(async (req) => {
         JSON.stringify({ error: "This listing has no price set" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Fetch seller's profile for Stripe Connect
+    const { data: sellerProfile, error: sellerError } = await supabaseAdmin
+      .from("profiles")
+      .select("stripe_account_id, stripe_onboarding_complete, email, display_name")
+      .eq("user_id", listing.user_id)
+      .single();
+
+    if (sellerError) {
+      console.error("Error fetching seller profile:", sellerError);
     }
 
     // Import Stripe dynamically
@@ -98,10 +115,14 @@ serve(async (req) => {
       customerId = customer.id;
     }
 
-    // Create checkout session
+    // Create checkout session - with or without Stripe Connect
     const priceInCents = Math.round(listing.price_usd * 100);
     
-    const session = await stripe.checkout.sessions.create({
+    // Calculate platform fee (0% for now, can be adjusted later)
+    const platformFeePercent = 0;
+    const platformFee = Math.round(priceInCents * platformFeePercent / 100);
+
+    let sessionParams: any = {
       customer: customerId,
       payment_method_types: ["card"],
       line_items: [
@@ -125,19 +146,32 @@ serve(async (req) => {
         seller_id: listing.user_id,
         listing_id: listingId,
         listing_title: listing.title,
-        seller_email: listing.profiles?.email || "",
+        seller_email: sellerProfile?.email || "",
+        platform_fee: platformFee.toString(),
       },
-    });
+    };
 
-    // Create listing purchase record
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    // If seller has completed Stripe Connect onboarding, use Connect
+    if (sellerProfile?.stripe_account_id && sellerProfile?.stripe_onboarding_complete) {
+      console.log("Using Stripe Connect for seller:", sellerProfile.stripe_account_id);
+      
+      sessionParams.payment_intent_data = {
+        application_fee_amount: platformFee,
+        transfer_data: {
+          destination: sellerProfile.stripe_account_id,
+        },
+      };
+    } else {
+      console.log("Seller has not completed Stripe Connect onboarding, payment goes to platform");
+    }
 
+    const session = await stripe.checkout.sessions.create(sessionParams);
+
+    // Create listing purchase record with seller_id
     await supabaseAdmin.from("listing_purchases").insert({
       user_id: user.id,
       listing_id: listingId,
+      seller_id: listing.user_id,
       stripe_session_id: session.id,
       amount: priceInCents,
       currency: "usd",

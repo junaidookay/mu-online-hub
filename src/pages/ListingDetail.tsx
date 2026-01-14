@@ -1,19 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, 
   ExternalLink, 
-  Globe, 
-  FileCode, 
-  Shield, 
-  Rocket, 
-  Code, 
   Package,
-  DollarSign,
   Calendar,
   User,
   ShoppingCart,
-  Loader2
+  Loader2,
+  CheckCircle
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
@@ -22,6 +17,9 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { categoryIcons, categoryLabels } from '@/lib/categories';
+import { ReviewsSection } from '@/components/marketplace/ReviewsSection';
+import { UserBadges } from '@/components/user/UserBadges';
 
 interface Listing {
   id: string;
@@ -35,34 +33,29 @@ interface Listing {
   expires_at: string | null;
   created_at: string;
   user_id: string;
-  profiles?: {
-    display_name: string | null;
-    email: string | null;
-  };
 }
 
-const categoryIcons: Record<string, any> = {
-  websites: Globe,
-  server_files: FileCode,
-  antihack: Shield,
-  launchers: Rocket,
-  custom_scripts: Code,
-};
+interface SellerProfile {
+  display_name: string | null;
+  avatar_url: string | null;
+}
 
-const categoryLabels: Record<string, string> = {
-  websites: 'Websites',
-  server_files: 'Server Files',
-  antihack: 'Antihack',
-  launchers: 'Launchers',
-  custom_scripts: 'Custom Scripts',
-};
+interface SellerStats {
+  seller_level: number;
+  seller_xp: number;
+  sales_count: number;
+  badges: string[];
+}
 
 const ListingDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [listing, setListing] = useState<Listing | null>(null);
+  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
+  const [sellerStats, setSellerStats] = useState<SellerStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
 
@@ -72,19 +65,44 @@ const ListingDetail = () => {
     }
   }, [id]);
 
+  useEffect(() => {
+    // Show success message if coming back from successful payment
+    if (searchParams.get('success') === 'true') {
+      toast({
+        title: 'Purchase Successful!',
+        description: 'Thank you for your purchase. The seller will be notified.',
+      });
+    }
+  }, [searchParams]);
+
   const fetchListing = async () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('listings')
-      .select(`
-        *,
-        profiles!listings_user_id_fkey(display_name, email)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
     if (data && !error) {
-      setListing(data as any);
+      setListing(data);
+      
+      // Fetch seller profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('user_id', data.user_id)
+        .single();
+      
+      setSellerProfile(profile);
+
+      // Fetch seller stats
+      const { data: stats } = await supabase
+        .from('user_stats')
+        .select('seller_level, seller_xp, sales_count, badges')
+        .eq('user_id', data.user_id)
+        .single();
+      
+      setSellerStats(stats);
     } else {
       toast({
         title: 'Error',
@@ -308,13 +326,40 @@ const ListingDetail = () => {
                 <User className="w-4 h-4" />
                 Seller Information
               </h3>
-              <div className="space-y-2 text-sm">
-                <p className="text-muted-foreground">
-                  <span className="text-foreground font-medium">
-                    {listing.profiles?.display_name || 'Anonymous Seller'}
-                  </span>
-                </p>
-                <p className="text-muted-foreground">
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  {sellerProfile?.avatar_url ? (
+                    <img 
+                      src={sellerProfile.avatar_url} 
+                      alt="" 
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <User className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-medium">
+                      {sellerProfile?.display_name || 'Anonymous Seller'}
+                    </p>
+                    {sellerStats && sellerStats.sales_count > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {sellerStats.sales_count} sales
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                {sellerStats && (
+                  <UserBadges 
+                    badges={sellerStats.badges || []}
+                    sellerLevel={sellerStats.seller_level}
+                    compact
+                  />
+                )}
+                
+                <p className="text-xs text-muted-foreground">
                   Listed on {new Date(listing.created_at).toLocaleDateString()}
                 </p>
               </div>
@@ -328,6 +373,11 @@ const ListingDetail = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-8">
+          <ReviewsSection listingId={listing.id} sellerId={listing.user_id} />
         </div>
       </main>
     </div>

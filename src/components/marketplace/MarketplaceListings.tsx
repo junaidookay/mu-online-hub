@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Globe, FileCode, Shield, Rocket, Code, Package, ShoppingCart } from 'lucide-react';
+import { Package, ShoppingCart, Star } from 'lucide-react';
+import { categoryIcons, categoryLabels, marketplaceCategories, serviceCategories } from '@/lib/categories';
 
 interface Listing {
   id: string;
@@ -19,31 +20,24 @@ interface Listing {
 interface MarketplaceListingsProps {
   searchQuery?: string;
   activeCategory?: string;
+  categoryType?: 'marketplace' | 'services';
 }
 
-const categoryIcons: Record<string, any> = {
-  websites: Globe,
-  server_files: FileCode,
-  antihack: Shield,
-  launchers: Rocket,
-  custom_scripts: Code,
-};
+// Get category IDs for each type
+const marketplaceCategoryIds = marketplaceCategories.map(c => c.id);
+const serviceCategoryIds = serviceCategories.map(c => c.id);
 
-const categoryLabels: Record<string, string> = {
-  websites: 'Websites',
-  server_files: 'Server Files',
-  antihack: 'Antihack',
-  launchers: 'Launchers',
-  custom_scripts: 'Custom Scripts',
-};
-
-export const MarketplaceListings = ({ searchQuery = '', activeCategory = 'all' }: MarketplaceListingsProps) => {
+export const MarketplaceListings = ({ 
+  searchQuery = '', 
+  activeCategory = 'all',
+  categoryType = 'marketplace'
+}: MarketplaceListingsProps) => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchListings();
-  }, []);
+  }, [categoryType]);
 
   const fetchListings = async () => {
     setIsLoading(true);
@@ -63,17 +57,21 @@ export const MarketplaceListings = ({ searchQuery = '', activeCategory = 'all' }
     setIsLoading(false);
   };
 
+  // Filter by category type first
+  const categoryIds = categoryType === 'marketplace' ? marketplaceCategoryIds : serviceCategoryIds;
+  
   const filteredListings = listings.filter(listing => {
+    // Filter by category type
+    const matchesCategoryType = (categoryIds as readonly string[]).includes(listing.category);
+    
     const matchesSearch = !searchQuery || 
       listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       listing.description?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesCategory = activeCategory === 'all' || 
-      listing.category === activeCategory ||
-      (activeCategory === 'server-files' && listing.category === 'server_files') ||
-      (activeCategory === 'tools' && listing.category === 'custom_scripts');
+      listing.category === activeCategory;
     
-    return matchesSearch && matchesCategory;
+    return matchesCategoryType && matchesSearch && matchesCategory;
   });
 
   if (isLoading) {

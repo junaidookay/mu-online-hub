@@ -21,6 +21,7 @@ import CreateListing from "./pages/CreateListing";
 import EditListing from "./pages/EditListing";
 import PublishListing from "./pages/PublishListing";
 import ListingDetail from "./pages/ListingDetail";
+import SellerEarnings from "./pages/SellerEarnings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,11 @@ const App = () => (
             <Route path="/create-server" element={<CreateServer />} />
             <Route path="/arcana-projects" element={<ArcanaProjects />} />
             <Route path="/seller-onboarding" element={<SellerOnboarding />} />
+            <Route path="/seller" element={<SellerDashboard />} />
+            <Route path="/seller/create" element={<CreateListing />} />
+            <Route path="/seller/edit/:id" element={<EditListing />} />
+            <Route path="/seller/publish/:id" element={<PublishListing />} />
+            <Route path="/seller/earnings" element={<SellerEarnings />} />
             <Route path="/seller-dashboard" element={<SellerDashboard />} />
             <Route path="/seller-dashboard/create" element={<CreateListing />} />
             <Route path="/seller-dashboard/edit/:id" element={<EditListing />} />
