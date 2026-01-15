@@ -9,7 +9,7 @@ const corsHeaders = {
 };
 
 interface EmailRequest {
-  type: "welcome" | "payment_success" | "password_reset" | "listing_purchased" | "listing_expiring";
+  type: "welcome" | "payment_success" | "password_reset" | "listing_purchased" | "listing_expiring" | "new_review";
   to: string;
   data?: Record<string, string>;
 }
@@ -116,6 +116,31 @@ const emailTemplates = {
         </div>
         <p style="text-align: center; margin-top: 30px;">
           <a href="${data.siteUrl}/seller-dashboard" style="background: #f4c430; color: #1a1a2e; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Renew Listing</a>
+        </p>
+        <p style="color: #888; font-size: 12px; margin-top: 40px; text-align: center;">
+          © MU Online Hub. All rights reserved.
+        </p>
+      </div>
+    `,
+  }),
+
+  new_review: (data: Record<string, string>) => ({
+    subject: "New Review on Your Listing! - MU Online Hub",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #1a1a2e; color: #eee;">
+        <h1 style="color: #f4c430; text-align: center;">⭐ New Review Received!</h1>
+        <p>Hi ${data.sellerName || "there"},</p>
+        <p>Great news! Someone just left a review on your listing.</p>
+        <div style="background: #2a2a4e; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p><strong>Listing:</strong> ${data.listingTitle}</p>
+          <p><strong>Rating:</strong> ${"⭐".repeat(parseInt(data.rating) || 5)}</p>
+          ${data.reviewTitle ? `<p><strong>Title:</strong> ${data.reviewTitle}</p>` : ''}
+          ${data.reviewContent ? `<p><strong>Review:</strong> "${data.reviewContent}"</p>` : ''}
+          <p><strong>Reviewer:</strong> ${data.reviewerName}</p>
+          ${data.isVerified === 'true' ? '<p style="color: #4ade80;">✓ Verified Purchase</p>' : ''}
+        </div>
+        <p style="text-align: center; margin-top: 30px;">
+          <a href="${data.siteUrl}/marketplace/${data.listingId}" style="background: #f4c430; color: #1a1a2e; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Listing</a>
         </p>
         <p style="color: #888; font-size: 12px; margin-top: 40px; text-align: center;">
           © MU Online Hub. All rights reserved.

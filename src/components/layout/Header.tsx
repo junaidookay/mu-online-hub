@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { 
   Menu, X, LogOut, Shield, User, Crown, UserCircle, Store, Wrench, 
-  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag
+  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag, Search, Users
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -185,9 +185,17 @@ const Header = () => {
                       <>
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel className="text-xs text-muted-foreground">Buyer</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => navigate('/buyer/dashboard')}>
+                          <LayoutDashboard size={16} className="mr-2" />
+                          Buyer Dashboard
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/marketplace')}>
                           <ShoppingBag size={16} className="mr-2" />
                           Browse Marketplace
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/sellers')}>
+                          <Users size={16} className="mr-2" />
+                          Find Sellers
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => navigate('/seller-onboarding')}>
                           <Store size={16} className="mr-2" />
@@ -296,9 +304,17 @@ const Header = () => {
                   {!isSeller && (
                     <div className="pb-2 mb-2 border-b border-border/30">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Buyer</p>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/buyer/dashboard'); setIsMenuOpen(false); }}>
+                        <LayoutDashboard size={16} className="mr-2" />
+                        Buyer Dashboard
+                      </Button>
                       <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/marketplace'); setIsMenuOpen(false); }}>
                         <ShoppingBag size={16} className="mr-2" />
                         Browse Marketplace
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/sellers'); setIsMenuOpen(false); }}>
+                        <Users size={16} className="mr-2" />
+                        Find Sellers
                       </Button>
                       <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/seller-onboarding'); setIsMenuOpen(false); }}>
                         <Store size={16} className="mr-2" />

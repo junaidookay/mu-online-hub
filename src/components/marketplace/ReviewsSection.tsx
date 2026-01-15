@@ -149,6 +149,53 @@ export const ReviewsSection = ({ listingId, sellerId }: ReviewsSectionProps) => 
       setRating(5);
       fetchReviews();
       setHasReviewed(true);
+
+      // Send email notification to seller
+      try {
+        // Get seller info
+        const { data: sellerProfile } = await supabase
+          .from('profiles')
+          .select('email, display_name')
+          .eq('user_id', sellerId)
+          .single();
+
+        // Get listing info
+        const { data: listing } = await supabase
+          .from('listings')
+          .select('title')
+          .eq('id', listingId)
+          .single();
+
+        // Get reviewer info
+        const { data: reviewerProfile } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', user.id)
+          .single();
+
+        if (sellerProfile?.email) {
+          await supabase.functions.invoke('send-email', {
+            body: {
+              type: 'new_review',
+              to: sellerProfile.email,
+              data: {
+                sellerName: sellerProfile.display_name || 'Seller',
+                listingTitle: listing?.title || 'Your Listing',
+                listingId,
+                rating: rating.toString(),
+                reviewTitle: title || '',
+                reviewContent: content || '',
+                reviewerName: reviewerProfile?.display_name || 'A buyer',
+                isVerified: hasPurchased.toString(),
+                siteUrl: window.location.origin
+              }
+            }
+          });
+        }
+      } catch (emailError) {
+        console.error('Failed to send notification email:', emailError);
+        // Don't show error to user, review was still submitted
+      }
     }
     setIsSubmitting(false);
   };
