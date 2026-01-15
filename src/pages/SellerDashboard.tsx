@@ -12,7 +12,7 @@ import { StripeConnectCard } from '@/components/seller/StripeConnectCard';
 import { categoryIcons, categoryLabels } from '@/lib/categories';
 import { 
   Plus, Package, Eye, EyeOff, Trash2, Edit, 
-  Loader2, CreditCard
+  Loader2, CreditCard, DollarSign, TrendingUp, ArrowRight, User
 } from 'lucide-react';
 
 interface Listing {
@@ -31,11 +31,22 @@ interface SellerCategory {
   category: string;
 }
 
+interface EarningsStats {
+  total_earned_cents: number;
+  sales_count: number;
+  pending_amount: number;
+}
+
 const SellerDashboard = () => {
   const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [earningsStats, setEarningsStats] = useState<EarningsStats>({
+    total_earned_cents: 0,
+    sales_count: 0,
+    pending_amount: 0,
+  });
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -86,6 +97,28 @@ const SellerDashboard = () => {
     if (listingsData) {
       setListings(listingsData);
     }
+
+    // Fetch earnings stats
+    const { data: statsData } = await supabase
+      .from('user_stats')
+      .select('total_earned_cents, sales_count')
+      .eq('user_id', user.id)
+      .single();
+
+    // Fetch pending payouts
+    const { data: pendingPayouts } = await supabase
+      .from('seller_payouts')
+      .select('net_amount_cents')
+      .eq('user_id', user.id)
+      .eq('status', 'pending');
+
+    const pendingAmount = pendingPayouts?.reduce((sum, p) => sum + p.net_amount_cents, 0) || 0;
+
+    setEarningsStats({
+      total_earned_cents: statsData?.total_earned_cents || 0,
+      sales_count: statsData?.sales_count || 0,
+      pending_amount: pendingAmount,
+    });
 
     setIsLoading(false);
   };
@@ -144,6 +177,56 @@ const SellerDashboard = () => {
             </Link>
           </Button>
         </div>
+
+        {/* Earnings Summary Card */}
+        <Card className="glass-card mb-8">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-primary" />
+                Earnings Summary
+              </CardTitle>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/seller/earnings">
+                  View Details
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <p className="text-2xl font-bold text-primary">
+                  ${(earningsStats.total_earned_cents / 100).toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Earned</p>
+              </div>
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <p className="text-2xl font-bold text-yellow-400">
+                  ${(earningsStats.pending_amount / 100).toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">Pending Payout</p>
+              </div>
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <p className="text-2xl font-bold text-green-400">
+                  {earningsStats.sales_count}
+                </p>
+                <p className="text-xs text-muted-foreground">Total Sales</p>
+              </div>
+              <div className="p-4 bg-muted/30 rounded-lg">
+                <Link 
+                  to={`/seller/profile/${user?.id}`} 
+                  className="flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  <User className="w-4 h-4" />
+                  View Public Profile
+                </Link>
+                <p className="text-xs text-muted-foreground mt-1">See how buyers see you</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Stripe Connect Card */}
