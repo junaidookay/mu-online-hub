@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Menu, X, LogOut, Shield, User, Crown, UserCircle, Store, Wrench, Server, Sparkles } from 'lucide-react';
+import { 
+  Menu, X, LogOut, Shield, User, Crown, UserCircle, Store, Wrench, 
+  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag
+} from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -36,6 +41,7 @@ const navLinks = [
 const Header = () => {
   const [currentSlogan, setCurrentSlogan] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [userType, setUserType] = useState<'buyer' | 'seller' | null>(null);
   const { user, isAdmin, signOut, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -46,10 +52,33 @@ const Header = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      fetchUserType();
+    } else {
+      setUserType(null);
+    }
+  }, [user]);
+
+  const fetchUserType = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('user_type')
+      .eq('user_id', user.id)
+      .single();
+    
+    if (data?.user_type) {
+      setUserType(data.user_type as 'buyer' | 'seller');
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
+
+  const isSeller = userType === 'seller';
 
   return (
     <header className="sticky top-0 z-50 w-full glass-card border-b border-border/30">
@@ -115,21 +144,70 @@ const Header = () => {
                       {user.email?.split('@')[0]}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuContent align="end" className="w-56">
+                    {/* General section */}
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">General</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                      <User size={16} className="mr-2" />
+                      <LayoutDashboard size={16} className="mr-2" />
                       My Dashboard
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/profile')}>
                       <UserCircle size={16} className="mr-2" />
                       My Profile
                     </DropdownMenuItem>
-                    {isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate('/admin')}>
-                        <Shield size={16} className="mr-2" />
-                        Admin Panel
-                      </DropdownMenuItem>
+
+                    {/* Seller section */}
+                    {isSeller && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Seller</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => navigate('/seller-dashboard')}>
+                          <Store size={16} className="mr-2" />
+                          Seller Dashboard
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/seller/earnings')}>
+                          <DollarSign size={16} className="mr-2" />
+                          Earnings
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/seller/profile/${user.id}`)}>
+                          <User size={16} className="mr-2" />
+                          Public Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/seller-dashboard/create')}>
+                          <Package size={16} className="mr-2" />
+                          Create Listing
+                        </DropdownMenuItem>
+                      </>
                     )}
+
+                    {/* Buyer section - show option to become seller */}
+                    {!isSeller && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Buyer</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => navigate('/marketplace')}>
+                          <ShoppingBag size={16} className="mr-2" />
+                          Browse Marketplace
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/seller-onboarding')}>
+                          <Store size={16} className="mr-2" />
+                          Become a Seller
+                        </DropdownMenuItem>
+                      </>
+                    )}
+
+                    {/* Admin section */}
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">Admin</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => navigate('/admin')}>
+                          <Shield size={16} className="mr-2" />
+                          Admin Panel
+                        </DropdownMenuItem>
+                      </>
+                    )}
+
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                       <LogOut size={16} className="mr-2" />
@@ -185,14 +263,50 @@ const Header = () => {
             <>
               {user ? (
                 <>
-                  <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/dashboard'); setIsMenuOpen(false); }}>
-                    <User size={16} className="mr-2" />
-                    My Dashboard
-                  </Button>
-                  <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/profile'); setIsMenuOpen(false); }}>
-                    <UserCircle size={16} className="mr-2" />
-                    My Profile
-                  </Button>
+                  <div className="pb-2 mb-2 border-b border-border/30">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 mt-2">Account</p>
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/dashboard'); setIsMenuOpen(false); }}>
+                      <LayoutDashboard size={16} className="mr-2" />
+                      My Dashboard
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/profile'); setIsMenuOpen(false); }}>
+                      <UserCircle size={16} className="mr-2" />
+                      My Profile
+                    </Button>
+                  </div>
+
+                  {isSeller && (
+                    <div className="pb-2 mb-2 border-b border-border/30">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Seller</p>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/seller-dashboard'); setIsMenuOpen(false); }}>
+                        <Store size={16} className="mr-2" />
+                        Seller Dashboard
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/seller/earnings'); setIsMenuOpen(false); }}>
+                        <DollarSign size={16} className="mr-2" />
+                        Earnings
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate(`/seller/profile/${user.id}`); setIsMenuOpen(false); }}>
+                        <User size={16} className="mr-2" />
+                        Public Profile
+                      </Button>
+                    </div>
+                  )}
+
+                  {!isSeller && (
+                    <div className="pb-2 mb-2 border-b border-border/30">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">Buyer</p>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/marketplace'); setIsMenuOpen(false); }}>
+                        <ShoppingBag size={16} className="mr-2" />
+                        Browse Marketplace
+                      </Button>
+                      <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/seller-onboarding'); setIsMenuOpen(false); }}>
+                        <Store size={16} className="mr-2" />
+                        Become a Seller
+                      </Button>
+                    </div>
+                  )}
+
                   {isAdmin && (
                     <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/admin'); setIsMenuOpen(false); }}>
                       <Shield size={16} className="mr-2" />

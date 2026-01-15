@@ -22,6 +22,7 @@ import EditListing from "./pages/EditListing";
 import PublishListing from "./pages/PublishListing";
 import ListingDetail from "./pages/ListingDetail";
 import SellerEarnings from "./pages/SellerEarnings";
+import SellerProfile from "./pages/SellerProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/seller/edit/:id" element={<EditListing />} />
             <Route path="/seller/publish/:id" element={<PublishListing />} />
             <Route path="/seller/earnings" element={<SellerEarnings />} />
+            <Route path="/seller/profile/:sellerId" element={<SellerProfile />} />
             <Route path="/seller-dashboard" element={<SellerDashboard />} />
             <Route path="/seller-dashboard/create" element={<CreateListing />} />
             <Route path="/seller-dashboard/edit/:id" element={<EditListing />} />
