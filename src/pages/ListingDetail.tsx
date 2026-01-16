@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { categoryIcons, categoryLabels } from '@/lib/categories';
 import { ReviewsSection } from '@/components/marketplace/ReviewsSection';
 import { UserBadges } from '@/components/user/UserBadges';
+import ContactSellerButton from '@/components/messaging/ContactSellerButton';
 
 interface Listing {
   id: string;
@@ -316,6 +317,15 @@ const ListingDetail = () => {
                       Visit Website
                     </a>
                   </Button>
+                )}
+
+                {user?.id !== listing.user_id && (
+                  <ContactSellerButton 
+                    sellerId={listing.user_id}
+                    listingId={listing.id}
+                    listingTitle={listing.title}
+                    className="w-full"
+                  />
                 )}
               </div>
             </div>

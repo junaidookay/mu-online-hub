@@ -6,21 +6,29 @@ import ArcanaProjects from '@/components/sections/ArcanaProjects';
 
 const BottomGrid = () => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-      {/* Left Column - Marketplace & Services Ads */}
-      <div className="lg:col-span-2 space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+      {/* Left Column 1 - Marketplace Ads */}
+      <div className="lg:col-span-2">
         <MarketplaceAdvertise />
+      </div>
+
+      {/* Left Column 2 - Services Ads */}
+      <div className="lg:col-span-2">
         <ServicesAdvertise />
       </div>
 
-      {/* Center Column - Top Servers */}
-      <div className="lg:col-span-6">
+      {/* Center Column - Top Servers (Primary Focus - Widest) */}
+      <div className="lg:col-span-4 md:col-span-2 lg:row-span-1">
         <TopServers />
       </div>
 
-      {/* Right Column - Partners & Arcana Projects */}
-      <div className="lg:col-span-4 space-y-4">
+      {/* Right Column 1 - Partners */}
+      <div className="lg:col-span-2">
         <PartnersSection />
+      </div>
+
+      {/* Right Column 2 - Arcana Projects */}
+      <div className="lg:col-span-2">
         <ArcanaProjects />
       </div>
     </div>

@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { 
   Menu, X, LogOut, Shield, User, Crown, UserCircle, Store, Wrench, 
-  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag, Search, Users
+  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag, Search, Users, MessageCircle
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -151,6 +151,10 @@ const Header = () => {
                       <LayoutDashboard size={16} className="mr-2" />
                       My Dashboard
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/messages')}>
+                      <MessageCircle size={16} className="mr-2" />
+                      Messages
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/profile')}>
                       <UserCircle size={16} className="mr-2" />
                       My Profile
@@ -276,6 +280,10 @@ const Header = () => {
                     <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/dashboard'); setIsMenuOpen(false); }}>
                       <LayoutDashboard size={16} className="mr-2" />
                       My Dashboard
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/messages'); setIsMenuOpen(false); }}>
+                      <MessageCircle size={16} className="mr-2" />
+                      Messages
                     </Button>
                     <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/profile'); setIsMenuOpen(false); }}>
                       <UserCircle size={16} className="mr-2" />
