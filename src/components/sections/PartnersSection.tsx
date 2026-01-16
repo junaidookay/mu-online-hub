@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from './SectionHeader';
 import { ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Partner = Tables<'partners'>;
@@ -29,15 +30,16 @@ const PartnersSection = () => {
     fetchPartners();
   }, []);
 
-  const displayPartners = partners.length > 0 ? partners : fallbackPartners;
+  const allPartners = partners.length > 0 ? partners : fallbackPartners;
+  const displayPartners = allPartners.slice(0, 10);
 
   return (
-    <div className="glass-card overflow-hidden">
+    <div className="glass-card overflow-hidden flex flex-col">
       <SectionHeader 
         title="MU Online Partners" 
         badge={<span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded live-indicator ml-2">LIVE</span>}
       />
-      <div className="p-2 space-y-2 max-h-[350px] overflow-y-auto scrollbar-thin">
+      <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
         {displayPartners.map((partner) => (
           <a
             key={partner.id}
@@ -62,6 +64,11 @@ const PartnersSection = () => {
             </div>
           </a>
         ))}
+      </div>
+      <div className="p-2 border-t border-border/30">
+        <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+          <a href="/partners">View All Partners</a>
+        </Button>
       </div>
     </div>
   );

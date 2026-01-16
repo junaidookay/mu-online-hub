@@ -26,6 +26,11 @@ import SellerProfile from "./pages/SellerProfile";
 import BuyerDashboard from "./pages/BuyerDashboard";
 import SellerDirectory from "./pages/SellerDirectory";
 import Messages from "./pages/Messages";
+import Servers from "./pages/Servers";
+import MarketplaceAds from "./pages/MarketplaceAds";
+import ServicesAds from "./pages/ServicesAds";
+import Partners from "./pages/Partners";
+import ArcanaProjectsPage from "./pages/ArcanaProjectsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +70,11 @@ const App = () => (
             <Route path="/sellers" element={<SellerDirectory />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/messages/:partnerId" element={<Messages />} />
+            <Route path="/servers" element={<Servers />} />
+            <Route path="/marketplace-ads" element={<MarketplaceAds />} />
+            <Route path="/services-ads" element={<ServicesAds />} />
+            <Route path="/partners" element={<Partners />} />
+            <Route path="/arcana-projects-all" element={<ArcanaProjectsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

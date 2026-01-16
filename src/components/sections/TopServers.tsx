@@ -35,15 +35,16 @@ const TopServers = () => {
     fetchServers();
   }, []);
 
-  const displayServers = servers.length > 0 ? servers : fallbackServers;
+  const allServers = servers.length > 0 ? servers : fallbackServers;
+  const displayServers = allServers.slice(0, 10);
 
   return (
     <div className="glass-card overflow-hidden flex flex-col">
       <SectionHeader 
         title="Top 50 MU Online Servers" 
-        badge={<span className="text-xs text-secondary">{servers.length} active</span>}
+        badge={<span className="text-xs text-secondary">{allServers.length} active</span>}
       />
-      <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin max-h-[500px]">
+      <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
         {displayServers.map((server, index) => (
           <div key={server.id}>
             <a
@@ -93,8 +94,8 @@ const TopServers = () => {
         ))}
       </div>
       <div className="p-2 border-t border-border/30">
-        <Button variant="outline" size="sm" className="w-full text-xs">
-          View All Servers
+        <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+          <a href="/servers">View All Servers</a>
         </Button>
       </div>
     </div>

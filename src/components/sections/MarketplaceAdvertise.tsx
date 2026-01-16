@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from './SectionHeader';
 import { ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -35,15 +36,16 @@ const MarketplaceAdvertise = () => {
     fetchAds();
   }, []);
 
-  const displayAds = ads.length > 0 ? ads : fallbackAds;
+  const allAds = ads.length > 0 ? ads : fallbackAds;
+  const displayAds = allAds.slice(0, 10);
 
   return (
-    <div className="glass-card overflow-hidden">
+    <div className="glass-card overflow-hidden flex flex-col">
       <SectionHeader 
         title="MU Online Marketplace Advertise" 
         subtitle="Websites, Server Files, Antihack etc."
       />
-      <div className="p-2 space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin">
+      <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
         {displayAds.map((ad) => (
           <a
             key={ad.id}
@@ -74,6 +76,11 @@ const MarketplaceAdvertise = () => {
             </div>
           </a>
         ))}
+      </div>
+      <div className="p-2 border-t border-border/30">
+        <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+          <a href="/marketplace-ads">View All Marketplace Ads</a>
+        </Button>
       </div>
     </div>
   );

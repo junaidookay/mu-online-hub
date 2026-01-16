@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from './SectionHeader';
 import { ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -34,15 +35,16 @@ const ServicesAdvertise = () => {
     fetchServices();
   }, []);
 
-  const displayServices = services.length > 0 ? services : fallbackServices;
+  const allServices = services.length > 0 ? services : fallbackServices;
+  const displayServices = allServices.slice(0, 10);
 
   return (
-    <div className="glass-card overflow-hidden">
+    <div className="glass-card overflow-hidden flex flex-col">
       <SectionHeader 
         title="MU Online Services Advertise" 
         subtitle="Configurations, Streamer, Custom, Video, Banner"
       />
-      <div className="p-2 space-y-2 max-h-[400px] overflow-y-auto scrollbar-thin">
+      <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
         {displayServices.map((service) => (
           <a
             key={service.id}
@@ -73,6 +75,11 @@ const ServicesAdvertise = () => {
             </div>
           </a>
         ))}
+      </div>
+      <div className="p-2 border-t border-border/30">
+        <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+          <a href="/services-ads">View All Service Ads</a>
+        </Button>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from './SectionHeader';
 import { ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ArcanaProject = Tables<'arcana_projects'>;
@@ -29,15 +30,16 @@ const ArcanaProjects = () => {
     fetchProjects();
   }, []);
 
-  const displayProjects = projects.length > 0 ? projects : fallbackProjects;
+  const allProjects = projects.length > 0 ? projects : fallbackProjects;
+  const displayProjects = allProjects.slice(0, 10);
 
   return (
-    <div className="glass-card overflow-hidden">
+    <div className="glass-card overflow-hidden flex flex-col">
       <SectionHeader 
         title="Arcana Projects" 
         badge={<span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded live-indicator ml-2">LIVE</span>}
       />
-      <div className="p-2 space-y-3">
+      <div className="flex-1 p-2 space-y-3 overflow-y-auto scrollbar-thin">
         {displayProjects.map((project) => (
           <a
             key={project.id}
@@ -63,6 +65,11 @@ const ArcanaProjects = () => {
             </div>
           </a>
         ))}
+      </div>
+      <div className="p-2 border-t border-border/30">
+        <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+          <a href="/arcana-projects">View All Arcana Projects</a>
+        </Button>
       </div>
     </div>
   );
