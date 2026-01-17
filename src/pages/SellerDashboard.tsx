@@ -9,10 +9,11 @@ import { useToast } from '@/hooks/use-toast';
 import { SEOHead } from '@/components/SEOHead';
 import Header from '@/components/layout/Header';
 import { StripeConnectCard } from '@/components/seller/StripeConnectCard';
+import { ListingAnalytics } from '@/components/seller/ListingAnalytics';
 import { categoryIcons, categoryLabels } from '@/lib/categories';
 import { 
   Plus, Package, Eye, EyeOff, Trash2, Edit, 
-  Loader2, CreditCard, DollarSign, TrendingUp, ArrowRight, User
+  Loader2, CreditCard, DollarSign, TrendingUp, ArrowRight, User, BarChart2
 } from 'lucide-react';
 
 interface Listing {
@@ -42,6 +43,7 @@ const SellerDashboard = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [selectedListingForAnalytics, setSelectedListingForAnalytics] = useState<Listing | null>(null);
   const [earningsStats, setEarningsStats] = useState<EarningsStats>({
     total_earned_cents: 0,
     sales_count: 0,
@@ -386,6 +388,15 @@ const SellerDashboard = () => {
                         </Button>
                       )}
                       <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setSelectedListingForAnalytics(
+                          selectedListingForAnalytics?.id === listing.id ? null : listing
+                        )}
+                      >
+                        <BarChart2 className="w-4 h-4" />
+                      </Button>
+                      <Button 
                         variant="destructive" 
                         size="sm"
                         onClick={() => handleDelete(listing.id)}
@@ -393,6 +404,14 @@ const SellerDashboard = () => {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
+                    {selectedListingForAnalytics?.id === listing.id && (
+                      <div className="mt-4">
+                        <ListingAnalytics 
+                          listingId={listing.id} 
+                          listingTitle={listing.title} 
+                        />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );

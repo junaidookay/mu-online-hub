@@ -23,6 +23,8 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 
 const slogans = [
   "The ultimate marketplace for MU Online...",
@@ -44,7 +46,7 @@ const Header = () => {
   const [userType, setUserType] = useState<'buyer' | 'seller' | null>(null);
   const { user, isAdmin, signOut, isLoading } = useAuth();
   const navigate = useNavigate();
-
+  const unreadMessages = useUnreadMessages();
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlogan((prev) => (prev + 1) % slogans.length);
@@ -137,28 +139,50 @@ const Header = () => {
           {!isLoading && (
             <>
               {user ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-2">
-                      <User size={14} />
-                      {user.email?.split('@')[0]}
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    {/* General section */}
-                    <DropdownMenuLabel className="text-xs text-muted-foreground">General</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                      <LayoutDashboard size={16} className="mr-2" />
-                      My Dashboard
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/messages')}>
-                      <MessageCircle size={16} className="mr-2" />
-                      Messages
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/profile')}>
-                      <UserCircle size={16} className="mr-2" />
-                      My Profile
-                    </DropdownMenuItem>
+                <>
+                  <NotificationBell />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="relative"
+                    onClick={() => navigate('/messages')}
+                  >
+                    <MessageCircle size={18} />
+                    {unreadMessages > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
+                        {unreadMessages > 99 ? '99+' : unreadMessages}
+                      </span>
+                    )}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="gap-2">
+                        <User size={14} />
+                        {user.email?.split('@')[0]}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      {/* General section */}
+                      <DropdownMenuLabel className="text-xs text-muted-foreground">General</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                        <LayoutDashboard size={16} className="mr-2" />
+                        My Dashboard
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/messages')} className="flex items-center justify-between">
+                        <span className="flex items-center">
+                          <MessageCircle size={16} className="mr-2" />
+                          Messages
+                        </span>
+                        {unreadMessages > 0 && (
+                          <span className="min-w-[20px] h-[20px] px-1 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
+                            {unreadMessages > 99 ? '99+' : unreadMessages}
+                          </span>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate('/profile')}>
+                        <UserCircle size={16} className="mr-2" />
+                        My Profile
+                      </DropdownMenuItem>
 
                     {/* Seller section */}
                     {isSeller && (
@@ -227,6 +251,7 @@ const Header = () => {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                </>
               ) : (
                 <Button className="btn-fantasy-primary" size="sm" onClick={() => navigate('/auth')}>
                   Log in
