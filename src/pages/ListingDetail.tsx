@@ -21,6 +21,7 @@ import { categoryIcons, categoryLabels } from '@/lib/categories';
 import { ReviewsSection } from '@/components/marketplace/ReviewsSection';
 import { UserBadges } from '@/components/user/UserBadges';
 import ContactSellerButton from '@/components/messaging/ContactSellerButton';
+import { useListingViews } from '@/hooks/useListingViews';
 
 interface Listing {
   id: string;
@@ -60,6 +61,8 @@ const ListingDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
 
+  // Track listing view
+  useListingViews(id);
   useEffect(() => {
     if (id) {
       fetchListing();
