@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { 
   Menu, X, LogOut, Shield, User, Crown, UserCircle, Store, Wrench, 
-  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag, Search, Users, MessageCircle
+  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag, Search, Users, MessageCircle, Receipt
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -183,7 +183,10 @@ const Header = () => {
                         <UserCircle size={16} className="mr-2" />
                         My Profile
                       </DropdownMenuItem>
-
+                      <DropdownMenuItem onClick={() => navigate('/transactions')}>
+                        <Receipt size={16} className="mr-2" />
+                        Transaction History
+                      </DropdownMenuItem>
                     {/* Seller section */}
                     {isSeller && (
                       <>

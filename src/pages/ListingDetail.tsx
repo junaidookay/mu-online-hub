@@ -22,6 +22,7 @@ import { ReviewsSection } from '@/components/marketplace/ReviewsSection';
 import { UserBadges } from '@/components/user/UserBadges';
 import ContactSellerButton from '@/components/messaging/ContactSellerButton';
 import { useListingViews } from '@/hooks/useListingViews';
+import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 
 interface Listing {
   id: string;
@@ -60,6 +61,7 @@ const ListingDetail = () => {
   const [sellerStats, setSellerStats] = useState<SellerStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
 
   // Track listing view
   useListingViews(id);
@@ -137,48 +139,8 @@ const ListingDetail = () => {
       return;
     }
 
-    setIsPurchasing(true);
-
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      const response = await supabase.functions.invoke('create-listing-checkout', {
-        body: {
-          listingId: listing.id,
-          successUrl: `${window.location.origin}/marketplace/${listing.id}?success=true`,
-          cancelUrl: `${window.location.origin}/marketplace/${listing.id}?canceled=true`,
-        },
-        headers: {
-          Authorization: `Bearer ${sessionData.session?.access_token}`,
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Failed to create checkout');
-      }
-
-      if (response.data?.needsConfiguration) {
-        toast({
-          title: 'Payment Not Available',
-          description: 'Payment system is being configured. Please try again later.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      if (response.data?.url) {
-        window.location.href = response.data.url;
-      }
-    } catch (error: any) {
-      console.error('Purchase error:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to initiate purchase',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsPurchasing(false);
-    }
+    // Open the checkout modal with payment options
+    setShowCheckoutModal(true);
   };
 
   if (isLoading) {
@@ -393,6 +355,21 @@ const ListingDetail = () => {
           <ReviewsSection listingId={listing.id} sellerId={listing.user_id} />
         </div>
       </main>
+
+      {/* Checkout Modal */}
+      {listing.price_usd && (
+        <CheckoutModal
+          isOpen={showCheckoutModal}
+          onClose={() => setShowCheckoutModal(false)}
+          listing={{
+            id: listing.id,
+            title: listing.title,
+            price_usd: listing.price_usd,
+            user_id: listing.user_id,
+          }}
+          sellerName={sellerProfile?.display_name || 'Seller'}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,9 @@ import {
   CreditCard, Wallet, Loader2, CheckCircle, 
   AlertCircle, ExternalLink, ArrowRight, Save
 } from 'lucide-react';
+
+// Validation schema for PayPal email
+const paypalEmailSchema = z.string().trim().email({ message: "Please enter a valid email address" }).max(255, { message: "Email must be less than 255 characters" });
 
 interface PaymentSettings {
   stripe_enabled: boolean;
@@ -43,6 +47,7 @@ export function PaymentSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -99,8 +104,46 @@ export function PaymentSettings() {
     }
   };
 
+  const validatePayPalEmail = (email: string): boolean => {
+    if (!email.trim()) {
+      setEmailError('PayPal email is required when PayPal is enabled');
+      return false;
+    }
+    
+    const result = paypalEmailSchema.safeParse(email);
+    if (!result.success) {
+      setEmailError(result.error.errors[0].message);
+      return false;
+    }
+    
+    setEmailError(null);
+    return true;
+  };
+
+  const handlePayPalEmailChange = (email: string) => {
+    setSettings({ ...settings, paypal_email: email });
+    if (email.trim()) {
+      validatePayPalEmail(email);
+    } else {
+      setEmailError(null);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
+
+    // Validate PayPal email if PayPal is enabled
+    if (settings.paypal_enabled) {
+      if (!validatePayPalEmail(settings.paypal_email)) {
+        toast({ 
+          title: 'Validation Error', 
+          description: 'Please enter a valid PayPal email address', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+    }
+
     setIsSaving(true);
 
     try {
@@ -110,7 +153,7 @@ export function PaymentSettings() {
           user_id: user.id,
           stripe_enabled: settings.stripe_enabled,
           paypal_enabled: settings.paypal_enabled,
-          paypal_email: settings.paypal_email || null,
+          paypal_email: settings.paypal_enabled ? settings.paypal_email.trim() : null,
           preferred_method: settings.preferred_method,
         }, {
           onConflict: 'user_id'
@@ -279,12 +322,16 @@ export function PaymentSettings() {
                     type="email"
                     placeholder="your@paypal.com"
                     value={settings.paypal_email}
-                    onChange={(e) => setSettings({ ...settings, paypal_email: e.target.value })}
-                    className="bg-muted/50"
+                    onChange={(e) => handlePayPalEmailChange(e.target.value)}
+                    className={`bg-muted/50 ${emailError ? 'border-destructive' : ''}`}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Buyers will send payments to this PayPal email
-                  </p>
+                  {emailError ? (
+                    <p className="text-xs text-destructive">{emailError}</p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Buyers will send payments to this PayPal email
+                    </p>
+                  )}
                 </div>
               )}
             </div>

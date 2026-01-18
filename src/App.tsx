@@ -32,6 +32,7 @@ import ServicesAds from "./pages/ServicesAds";
 import Partners from "./pages/Partners";
 import ArcanaProjectsPage from "./pages/ArcanaProjectsPage";
 import ManageCategories from "./pages/ManageCategories";
+import TransactionHistory from "./pages/TransactionHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/seller-dashboard/publish/:id" element={<PublishListing />} />
             <Route path="/buyer/dashboard" element={<BuyerDashboard />} />
             <Route path="/seller/manage-categories" element={<ManageCategories />} />
+            <Route path="/transactions" element={<TransactionHistory />} />
             <Route path="/sellers" element={<SellerDirectory />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/messages/:partnerId" element={<Messages />} />
