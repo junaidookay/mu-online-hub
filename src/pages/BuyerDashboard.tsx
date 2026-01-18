@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { SEOHead } from '@/components/SEOHead';
 import Header from '@/components/layout/Header';
 import { UserBadges } from '@/components/user/UserBadges';
+import { BuyerPaymentMethods } from '@/components/buyer/BuyerPaymentMethods';
 import { Loader2, Package, Star, ShoppingBag, TrendingUp, ExternalLink, User } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -266,6 +267,11 @@ const BuyerDashboard = () => {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* Payment Methods */}
+        <div className="mb-8">
+          <BuyerPaymentMethods />
         </div>
 
         {/* Purchase History */}

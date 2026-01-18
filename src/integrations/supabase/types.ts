@@ -413,6 +413,33 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_config: {
+        Row: {
+          config_key: string
+          config_value: string | null
+          created_at: string
+          id: string
+          is_enabled: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          config_key: string
+          config_value?: string | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          config_key?: string
+          config_value?: string | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -725,6 +752,39 @@ export type Database = {
         }
         Relationships: []
       }
+      seller_payment_settings: {
+        Row: {
+          created_at: string
+          id: string
+          paypal_email: string | null
+          paypal_enabled: boolean | null
+          preferred_method: string | null
+          stripe_enabled: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          paypal_email?: string | null
+          paypal_enabled?: boolean | null
+          preferred_method?: string | null
+          stripe_enabled?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          paypal_email?: string | null
+          paypal_enabled?: boolean | null
+          preferred_method?: string | null
+          stripe_enabled?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       seller_payouts: {
         Row: {
           amount_cents: number
@@ -839,6 +899,48 @@ export type Database = {
           updated_at?: string
           user_id?: string
           website?: string
+        }
+        Relationships: []
+      }
+      user_payment_methods: {
+        Row: {
+          card_brand: string | null
+          created_at: string
+          id: string
+          is_default: boolean | null
+          last_four: string | null
+          payment_type: string
+          paypal_email: string | null
+          stripe_customer_id: string | null
+          stripe_payment_method_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          card_brand?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          last_four?: string | null
+          payment_type: string
+          paypal_email?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          card_brand?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean | null
+          last_four?: string | null
+          payment_type?: string
+          paypal_email?: string | null
+          stripe_customer_id?: string | null
+          stripe_payment_method_id?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

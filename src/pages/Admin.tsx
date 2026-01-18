@@ -24,6 +24,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard';
 import { StripeSettings } from '@/components/admin/StripeSettings';
+import { PayPalSettings } from '@/components/admin/PayPalSettings';
 import type { Tables } from '@/integrations/supabase/types';
 
 type PremiumBanner = Tables<'premium_banners'>;
@@ -311,6 +312,7 @@ const Admin = () => {
           {/* Stripe Settings Tab */}
           <TabsContent value="stripe" className="space-y-6">
             <StripeSettings />
+            <PayPalSettings />
           </TabsContent>
 
           {/* Premium Banners Tab */}

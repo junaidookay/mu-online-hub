@@ -8,12 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { SEOHead } from '@/components/SEOHead';
 import Header from '@/components/layout/Header';
-import { StripeConnectCard } from '@/components/seller/StripeConnectCard';
+import { PaymentSettings } from '@/components/seller/PaymentSettings';
 import { ListingAnalytics } from '@/components/seller/ListingAnalytics';
 import { categoryIcons, categoryLabels } from '@/lib/categories';
 import { 
   Plus, Package, Eye, EyeOff, Trash2, Edit, 
-  Loader2, CreditCard, DollarSign, TrendingUp, ArrowRight, User, BarChart2
+  Loader2, CreditCard, DollarSign, TrendingUp, ArrowRight, User, BarChart2, Settings
 } from 'lucide-react';
 
 interface Listing {
@@ -172,12 +172,20 @@ const SellerDashboard = () => {
             </h1>
             <p className="text-muted-foreground">Manage your listings and earnings</p>
           </div>
-          <Button asChild className="btn-fantasy-primary">
-            <Link to="/seller-dashboard/create">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Listing
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild className="btn-fantasy-primary">
+              <Link to="/seller-dashboard/create">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Listing
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/seller/manage-categories">
+                <Settings className="w-4 h-4 mr-2" />
+                Manage Categories
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Earnings Summary Card */}
@@ -231,9 +239,9 @@ const SellerDashboard = () => {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Stripe Connect Card */}
+          {/* Payment Settings Card */}
           <div className="lg:col-span-1">
-            <StripeConnectCard />
+            <PaymentSettings />
           </div>
 
           {/* Quick Stats */}
