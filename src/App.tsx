@@ -33,6 +33,7 @@ import Partners from "./pages/Partners";
 import ArcanaProjectsPage from "./pages/ArcanaProjectsPage";
 import ManageCategories from "./pages/ManageCategories";
 import TransactionHistory from "./pages/TransactionHistory";
+import CreateSlotListing from "./pages/CreateSlotListing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,6 +80,7 @@ const App = () => (
             <Route path="/services-ads" element={<ServicesAds />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/arcana-projects-all" element={<ArcanaProjectsPage />} />
+            <Route path="/create-listing" element={<CreateSlotListing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
