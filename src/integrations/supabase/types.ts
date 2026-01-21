@@ -50,6 +50,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           rotation_order: number | null
+          slot_id: number | null
           title: string
           updated_at: string
           user_id: string
@@ -65,6 +66,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           rotation_order?: number | null
+          slot_id?: number | null
           title: string
           updated_at?: string
           user_id: string
@@ -80,6 +82,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           rotation_order?: number | null
+          slot_id?: number | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -495,6 +498,7 @@ export type Database = {
           id: string
           image_url: string
           is_active: boolean | null
+          slot_id: number | null
           title: string
           updated_at: string
           website: string
@@ -505,6 +509,7 @@ export type Database = {
           id?: string
           image_url: string
           is_active?: boolean | null
+          slot_id?: number | null
           title: string
           updated_at?: string
           website: string
@@ -515,6 +520,7 @@ export type Database = {
           id?: string
           image_url?: string
           is_active?: boolean | null
+          slot_id?: number | null
           title?: string
           updated_at?: string
           website?: string
@@ -531,6 +537,7 @@ export type Database = {
           name: string
           open_date: string | null
           rotation_order: number | null
+          slot_id: number | null
           user_id: string
           version: string
           website: string
@@ -544,6 +551,7 @@ export type Database = {
           name: string
           open_date?: string | null
           rotation_order?: number | null
+          slot_id?: number | null
           user_id: string
           version: string
           website: string
@@ -557,6 +565,7 @@ export type Database = {
           name?: string
           open_date?: string | null
           rotation_order?: number | null
+          slot_id?: number | null
           user_id?: string
           version?: string
           website?: string
@@ -575,6 +584,7 @@ export type Database = {
           name: string
           price_cents: number
           product_type: string
+          slot_id: number | null
         }
         Insert: {
           created_at?: string
@@ -587,6 +597,7 @@ export type Database = {
           name: string
           price_cents: number
           product_type: string
+          slot_id?: number | null
         }
         Update: {
           created_at?: string
@@ -599,6 +610,7 @@ export type Database = {
           name?: string
           price_cents?: number
           product_type?: string
+          slot_id?: number | null
         }
         Relationships: []
       }
@@ -707,6 +719,7 @@ export type Database = {
           is_active: boolean | null
           link: string | null
           promo_type: string
+          slot_id: number | null
           text: string
         }
         Insert: {
@@ -717,6 +730,7 @@ export type Database = {
           is_active?: boolean | null
           link?: string | null
           promo_type: string
+          slot_id?: number | null
           text: string
         }
         Update: {
@@ -727,6 +741,7 @@ export type Database = {
           is_active?: boolean | null
           link?: string | null
           promo_type?: string
+          slot_id?: number | null
           text?: string
         }
         Relationships: []
@@ -858,6 +873,7 @@ export type Database = {
           part: string
           rotation_order: number | null
           season: string
+          slot_id: number | null
           updated_at: string
           user_id: string
           website: string
@@ -877,6 +893,7 @@ export type Database = {
           part: string
           rotation_order?: number | null
           season: string
+          slot_id?: number | null
           updated_at?: string
           user_id: string
           website: string
@@ -896,11 +913,62 @@ export type Database = {
           part?: string
           rotation_order?: number | null
           season?: string
+          slot_id?: number | null
           updated_at?: string
           user_id?: string
           website?: string
         }
         Relationships: []
+      }
+      slot_purchases: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          package_id: string | null
+          product_type: string
+          slot_id: number
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          package_id?: string | null
+          product_type: string
+          slot_id: number
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          package_id?: string | null
+          product_type?: string
+          slot_id?: number
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slot_purchases_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "pricing_packages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_payment_methods: {
         Row: {

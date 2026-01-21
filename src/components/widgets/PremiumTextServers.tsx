@@ -1,36 +1,50 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from '@/components/sections/SectionHeader';
 
 interface TextServer {
   id: string;
   name: string;
-  expRate: string;
+  exp_rate: string;
   version: string;
-  openDate: string;
+  open_date: string | null;
   website: string;
 }
 
-const textServers: TextServer[] = [
-  { id: '1', name: 'SKAVORAMU.COM', expRate: 'x200', version: 'S6', openDate: 'Open 21.10', website: 'skavoramu.com' },
-  { id: '2', name: 'MU-HARDCORE.COM', expRate: 'x2', version: 'S6', openDate: 'Open 11.10', website: 'mu-hardcore.com' },
-  { id: '3', name: 'STELLARMU.COM', expRate: 'x100', version: 'S3', openDate: 'Open 01.10', website: 'stellarmu.com' },
-  { id: '4', name: 'REBMUBC', expRate: 'x100', version: 'S7', openDate: 'Open 10.09', website: 'rebmubc.com' },
-  { id: '5', name: 'LEGENDMU.NET', expRate: 'x500', version: 'S5', openDate: 'Open 05.09', website: 'legendmu.net' },
-];
-
 const PremiumTextServers = () => {
+  const [servers, setServers] = useState<TextServer[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    if (isPaused) return;
+    const fetchServers = async () => {
+      const { data } = await supabase
+        .from('premium_text_servers')
+        .select('*')
+        .eq('is_active', true)
+        .order('rotation_order');
+      
+      if (data && data.length > 0) {
+        setServers(data);
+      }
+    };
+    fetchServers();
+  }, []);
+
+  useEffect(() => {
+    if (isPaused || servers.length === 0) return;
     
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % textServers.length);
+      setCurrentIndex((prev) => (prev + 1) % servers.length);
     }, 5000);
     
     return () => clearInterval(interval);
-  }, [isPaused]);
+  }, [isPaused, servers.length]);
+
+  const displayServers = servers.length > 0 ? servers : [
+    { id: '1', name: 'SKAVORAMU.COM', exp_rate: 'x200', version: 'S6', open_date: 'Open 21.10', website: 'skavoramu.com' },
+    { id: '2', name: 'MU-HARDCORE.COM', exp_rate: 'x2', version: 'S6', open_date: 'Open 11.10', website: 'mu-hardcore.com' },
+  ];
 
   return (
     <div 
@@ -40,7 +54,7 @@ const PremiumTextServers = () => {
     >
       <SectionHeader title="Premium Text Servers" />
       <div className="p-2 space-y-1">
-        {textServers.map((server, index) => (
+        {displayServers.map((server, index) => (
           <a
             key={server.id}
             href={`https://${server.website}`}
@@ -57,9 +71,9 @@ const PremiumTextServers = () => {
               <span className="text-xs font-semibold text-foreground">{server.name}</span>
             </div>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <span>{server.expRate}</span>
+              <span>{server.exp_rate}</span>
               <span>{server.version}</span>
-              <span>{server.openDate}</span>
+              <span>{server.open_date || ''}</span>
             </div>
           </a>
         ))}
