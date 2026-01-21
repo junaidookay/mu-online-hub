@@ -15,11 +15,13 @@ import {
   Server,
   Megaphone,
   ExternalLink,
-  Crown
+  Crown,
+  LayoutGrid
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 import { SEOHead } from '@/components/SEOHead';
+import { MySlotListings } from '@/components/dashboard/MySlotListings';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ServerType = Tables<'servers'>;
@@ -197,8 +199,12 @@ const Dashboard = () => {
           <p className="text-muted-foreground">Manage your servers and advertisements</p>
         </div>
 
-        <Tabs defaultValue="servers" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
+        <Tabs defaultValue="homepage" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-6">
+            <TabsTrigger value="homepage" className="gap-2">
+              <LayoutGrid size={16} />
+              Homepage Listings
+            </TabsTrigger>
             <TabsTrigger value="servers" className="gap-2">
               <Server size={16} />
               My Servers ({servers.length})
@@ -208,6 +214,11 @@ const Dashboard = () => {
               My Ads ({ads.length})
             </TabsTrigger>
           </TabsList>
+
+          {/* Homepage Listings Tab */}
+          <TabsContent value="homepage" className="space-y-6">
+            <MySlotListings />
+          </TabsContent>
 
           {/* Servers Tab */}
           <TabsContent value="servers" className="space-y-6">

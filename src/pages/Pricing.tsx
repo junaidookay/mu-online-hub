@@ -8,7 +8,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ShoppingBag, Wrench, Trophy, Type, Image, Calendar, Percent, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SEOHead } from '@/components/SEOHead';
-import { SLOT_CONFIG, getSlotRedirectUrl } from '@/lib/slotConfig';
+import { SLOT_CONFIG, getSlotRedirectUrl, isSlotFree, FREE_SLOT_ID } from '@/lib/slotConfig';
+import { SlotCheckoutModal } from '@/components/checkout/SlotCheckoutModal';
+import { Badge } from '@/components/ui/badge';
 
 interface PricingPackage {
   id: string;
@@ -29,7 +31,8 @@ const Pricing = () => {
 
   const [packages, setPackages] = useState<PricingPackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<PricingPackage | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
 
   useEffect(() => {
     fetchPackages();
@@ -42,7 +45,11 @@ const Pricing = () => {
       .eq('is_active', true)
       .order('display_order');
 
-    if (data) setPackages(data as PricingPackage[]);
+    if (data) {
+      // Filter out slot 6 packages (it's free)
+      const filteredPackages = data.filter(pkg => pkg.slot_id !== FREE_SLOT_ID);
+      setPackages(filteredPackages as PricingPackage[]);
+    }
     if (error) console.error('Failed to fetch packages:', error);
     setLoading(false);
   };
@@ -58,55 +65,31 @@ const Pricing = () => {
       return;
     }
 
-    // Free packages - redirect directly to create listing
-    if (pkg.price_cents === 0 && pkg.slot_id) {
-      const redirectUrl = getSlotRedirectUrl(pkg.slot_id, pkg.id);
-      navigate(redirectUrl);
+    if (!pkg.slot_id) {
+      toast({
+        title: 'Invalid Package',
+        description: 'This package is not linked to a homepage slot.',
+        variant: 'destructive',
+      });
       return;
     }
 
-    setProcessingId(pkg.id);
+    // Open checkout modal
+    setSelectedPackage(pkg);
+    setCheckoutOpen(true);
+  };
 
-    try {
-      const successUrl = pkg.slot_id 
-        ? `${window.location.origin}${getSlotRedirectUrl(pkg.slot_id, pkg.id)}&payment=success`
-        : `${window.location.origin}/dashboard?payment=success`;
-
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: {
-          packageId: pkg.id,
-          slotId: pkg.slot_id,
-          successUrl,
-          cancelUrl: `${window.location.origin}/pricing?payment=cancelled`,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.needsConfiguration) {
-        toast({
-          title: 'Coming Soon',
-          description: 'Payment system is being configured. Please check back later.',
-        });
-        return;
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error('No checkout URL received');
-      }
-
-    } catch (error: any) {
-      console.error('Checkout error:', error);
+  const handleFreeSlotAccess = () => {
+    if (!user) {
       toast({
-        title: 'Checkout Failed',
-        description: error.message || 'Failed to start checkout. Please try again.',
+        title: 'Login Required',
+        description: 'Please sign in to create a listing.',
         variant: 'destructive',
       });
-    } finally {
-      setProcessingId(null);
+      navigate('/auth');
+      return;
     }
+    navigate(getSlotRedirectUrl(FREE_SLOT_ID));
   };
 
   const formatPrice = (cents: number) => {
@@ -133,7 +116,7 @@ const Pricing = () => {
     return SLOT_CONFIG[slotId as keyof typeof SLOT_CONFIG]?.name || 'General';
   };
 
-  // Group packages by slot_id
+  // Group packages by slot_id (excluding slot 6)
   const groupedPackages = packages.reduce((acc, pkg) => {
     const key = pkg.slot_id || 0;
     if (!acc[key]) {
@@ -143,10 +126,10 @@ const Pricing = () => {
     return acc;
   }, {} as Record<number, PricingPackage[]>);
 
-  // Get sorted slot IDs (1-8)
+  // Get sorted slot IDs (1-8, excluding 6)
   const slotIds = Object.keys(groupedPackages)
     .map(Number)
-    .filter(id => id > 0)
+    .filter(id => id > 0 && id !== FREE_SLOT_ID)
     .sort((a, b) => a - b);
 
   if (loading || authLoading) {
@@ -174,6 +157,27 @@ const Pricing = () => {
             Boost your server's visibility with our premium features. Each package unlocks a specific 
             homepage slot for maximum exposure.
           </p>
+        </div>
+
+        {/* Free Slot Banner */}
+        <div className="glass-card p-6 mb-8 border-green-500/30 bg-green-500/5">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <Calendar className="w-8 h-8 text-green-500" />
+              <div>
+                <h3 className="font-display text-lg font-semibold flex items-center gap-2">
+                  Upcoming & Recent Servers
+                  <Badge variant="secondary" className="bg-green-500/20 text-green-400">FREE</Badge>
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  List your upcoming server for free! Auto-sorted by opening date.
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleFreeSlotAccess} className="bg-green-600 hover:bg-green-700">
+              Create Free Listing
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue={slotIds[0]?.toString() || '1'} className="w-full">
@@ -207,7 +211,7 @@ const Pricing = () => {
                 {groupedPackages[slotId]?.map((pkg) => (
                   <div
                     key={pkg.id}
-                    className={`glass-card p-6 flex flex-col ${pkg.price_cents === 0 ? 'border-green-500/50' : ''}`}
+                    className="glass-card p-6 flex flex-col"
                   >
                     <div className="flex items-center gap-3 mb-4">
                       {getSlotIcon(pkg.slot_id)}
@@ -219,7 +223,7 @@ const Pricing = () => {
                     </p>
 
                     <div className="mb-4">
-                      <span className={`text-3xl font-bold ${pkg.price_cents === 0 ? 'text-green-400' : 'text-primary'}`}>
+                      <span className="text-3xl font-bold text-primary">
                         {formatPrice(pkg.price_cents)}
                       </span>
                       <span className="text-muted-foreground ml-2">
@@ -240,19 +244,9 @@ const Pricing = () => {
 
                     <Button
                       onClick={() => handlePurchase(pkg)}
-                      disabled={processingId === pkg.id}
-                      className={`w-full ${pkg.price_cents === 0 ? 'bg-green-600 hover:bg-green-700' : 'btn-fantasy-primary'}`}
+                      className="w-full btn-fantasy-primary"
                     >
-                      {processingId === pkg.id ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Processing...
-                        </>
-                      ) : pkg.price_cents === 0 ? (
-                        'Get Started Free'
-                      ) : (
-                        'Purchase Now'
-                      )}
+                      Purchase Now
                     </Button>
                   </div>
                 ))}
@@ -263,13 +257,29 @@ const Pricing = () => {
 
         <div className="mt-12 glass-card p-6 text-center">
           <p className="text-muted-foreground text-sm">
-            🔒 Secure payments powered by Stripe. All transactions are encrypted and secure.
+            🔒 Secure payments powered by Stripe & PayPal. All transactions are encrypted and secure.
           </p>
           <p className="text-xs text-muted-foreground mt-2">
             Need help? Contact us for custom packages or bulk discounts.
           </p>
         </div>
       </div>
+
+      {/* Checkout Modal */}
+      {selectedPackage && (
+        <SlotCheckoutModal
+          isOpen={checkoutOpen}
+          onClose={() => {
+            setCheckoutOpen(false);
+            setSelectedPackage(null);
+          }}
+          packageId={selectedPackage.id}
+          packageName={selectedPackage.name}
+          slotId={selectedPackage.slot_id!}
+          priceInCents={selectedPackage.price_cents}
+          durationDays={selectedPackage.duration_days}
+        />
+      )}
     </div>
   );
 };

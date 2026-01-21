@@ -50,6 +50,39 @@ const CreateSlotListing = () => {
     }
   }, [user, authLoading, navigate]);
 
+  // Check slot access for non-free slots
+  useEffect(() => {
+    const checkAccess = async () => {
+      if (!user || !slotConfig) return;
+      
+      // Slot 6 is free - no purchase required
+      if (slotId === 6) return;
+      
+      // Check for active slot purchase
+      const { data: purchase } = await supabase
+        .from('slot_purchases')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('slot_id', slotId)
+        .eq('is_active', true)
+        .gte('expires_at', new Date().toISOString())
+        .maybeSingle();
+      
+      if (!purchase && !paymentSuccess) {
+        toast({
+          title: 'Package Required',
+          description: 'Please purchase a package to create a listing in this slot.',
+          variant: 'destructive',
+        });
+        navigate('/pricing');
+      }
+    };
+    
+    if (user && !authLoading) {
+      checkAccess();
+    }
+  }, [user, authLoading, slotId, slotConfig, paymentSuccess, navigate, toast]);
+
   useEffect(() => {
     if (paymentSuccess) {
       toast({

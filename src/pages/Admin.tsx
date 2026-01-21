@@ -25,6 +25,7 @@ import { Switch } from '@/components/ui/switch';
 import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard';
 import { StripeSettings } from '@/components/admin/StripeSettings';
 import { PayPalSettings } from '@/components/admin/PayPalSettings';
+import { AdminSlotManager } from '@/components/admin/AdminSlotManager';
 import type { Tables } from '@/integrations/supabase/types';
 
 type PremiumBanner = Tables<'premium_banners'>;
@@ -276,8 +277,12 @@ const Admin = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="analytics" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-6">
+        <Tabs defaultValue="slots" className="w-full">
+          <TabsList className="grid w-full grid-cols-7 mb-6">
+            <TabsTrigger value="slots" className="gap-2">
+              <Server size={16} />
+              Slots
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <BarChart3 size={16} />
               Analytics
@@ -303,6 +308,11 @@ const Admin = () => {
               Promos
             </TabsTrigger>
           </TabsList>
+
+          {/* Slot Manager Tab */}
+          <TabsContent value="slots" className="space-y-6">
+            <AdminSlotManager />
+          </TabsContent>
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">

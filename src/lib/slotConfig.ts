@@ -10,6 +10,9 @@ export const SLOT_CONFIG = {
     type: 'marketplace',
     table: 'advertisements',
     icon: 'ShoppingBag',
+    isFree: false,
+    maxListings: null, // unlimited
+    hasRotation: true,
   },
   2: {
     id: 2,
@@ -19,6 +22,9 @@ export const SLOT_CONFIG = {
     type: 'services',
     table: 'advertisements',
     icon: 'Wrench',
+    isFree: false,
+    maxListings: null,
+    hasRotation: true,
   },
   3: {
     id: 3,
@@ -28,6 +34,9 @@ export const SLOT_CONFIG = {
     type: 'top50',
     table: 'servers',
     icon: 'Trophy',
+    isFree: false,
+    maxListings: 50,
+    hasRotation: true,
   },
   4: {
     id: 4,
@@ -37,6 +46,9 @@ export const SLOT_CONFIG = {
     type: 'text-server',
     table: 'premium_text_servers',
     icon: 'Type',
+    isFree: false,
+    maxListings: 10, // configurable
+    hasRotation: true,
   },
   5: {
     id: 5,
@@ -46,15 +58,21 @@ export const SLOT_CONFIG = {
     type: 'main-banner',
     table: 'premium_banners',
     icon: 'Image',
+    isFree: false,
+    maxListings: 3,
+    hasRotation: true,
   },
   6: {
     id: 6,
     name: 'Upcoming & Recent',
-    description: 'Upcoming & Recent Servers',
+    description: 'Upcoming & Recent Servers (FREE)',
     createPath: '/create-listing',
     type: 'upcoming-server',
     table: 'servers',
     icon: 'Calendar',
+    isFree: true, // FREE SLOT
+    maxListings: null,
+    hasRotation: false,
   },
   7: {
     id: 7,
@@ -64,6 +82,9 @@ export const SLOT_CONFIG = {
     type: 'partner-discount',
     table: 'rotating_promos',
     icon: 'Percent',
+    isFree: false,
+    maxListings: null,
+    hasRotation: true,
   },
   8: {
     id: 8,
@@ -73,6 +94,9 @@ export const SLOT_CONFIG = {
     type: 'server-event',
     table: 'rotating_promos',
     icon: 'Sparkles',
+    isFree: false,
+    maxListings: null,
+    hasRotation: true,
   },
 } as const;
 
@@ -82,8 +106,16 @@ export const getSlotConfig = (slotId: number) => {
   return SLOT_CONFIG[slotId as SlotId] || null;
 };
 
-export const getSlotRedirectUrl = (slotId: number, packageId: string) => {
+export const getSlotRedirectUrl = (slotId: number, packageId?: string) => {
   const config = getSlotConfig(slotId);
   if (!config) return '/dashboard';
-  return `${config.createPath}?type=${config.type}&slot=${slotId}&package=${packageId}`;
+  const baseUrl = `${config.createPath}?type=${config.type}&slot=${slotId}`;
+  return packageId ? `${baseUrl}&package=${packageId}` : baseUrl;
 };
+
+export const isSlotFree = (slotId: number): boolean => {
+  const config = getSlotConfig(slotId);
+  return config?.isFree ?? false;
+};
+
+export const FREE_SLOT_ID = 6;

@@ -28,7 +28,6 @@ serve(async (req) => {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
 
-    // For webhook endpoint verification without signature (testing mode)
     let event;
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
     
@@ -44,7 +43,6 @@ serve(async (req) => {
         );
       }
     } else {
-      // Parse event directly (testing without webhook secret)
       event = JSON.parse(body);
       console.log("Processing event without signature verification (test mode)");
     }
@@ -62,11 +60,69 @@ serve(async (req) => {
 
       const metadata = session.metadata || {};
       
-      // Check if this is a listing purchase (from create-listing-checkout)
+      // Handle SLOT PURCHASE (new slot-based system)
+      if (metadata.product_type === "slot_purchase" && metadata.slot_id) {
+        console.log("Processing slot purchase for slot:", metadata.slot_id);
+        
+        const slotId = parseInt(metadata.slot_id);
+        const durationDays = parseInt(metadata.duration_days || "30");
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+
+        // Update slot purchase to active
+        const { error: slotError } = await supabaseAdmin
+          .from("slot_purchases")
+          .update({
+            is_active: true,
+            stripe_payment_intent_id: session.payment_intent,
+            completed_at: now.toISOString(),
+            expires_at: expiresAt.toISOString(),
+          })
+          .eq("stripe_session_id", session.id);
+
+        if (slotError) {
+          console.error("Failed to update slot purchase:", slotError);
+        } else {
+          console.log("Slot purchase activated successfully");
+        }
+
+        // Send confirmation email
+        if (session.customer_details?.email) {
+          try {
+            await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+              },
+              body: JSON.stringify({
+                type: "payment_success",
+                to: session.customer_details.email,
+                data: {
+                  name: session.customer_details.name || "User",
+                  packageName: `Slot ${slotId} Package`,
+                  amount: ((session.amount_total || 0) / 100).toFixed(2),
+                  duration: durationDays.toString(),
+                  expiresAt: expiresAt.toLocaleDateString(),
+                },
+              }),
+            });
+            console.log("Payment confirmation email sent");
+          } catch (emailError) {
+            console.error("Failed to send confirmation email:", emailError);
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ received: true, type: "slot_purchase" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Handle LISTING PURCHASE (marketplace item purchase)
       if (metadata.listing_id && metadata.buyer_id && metadata.seller_id) {
         console.log("Processing listing purchase:", metadata.listing_id);
 
-        // Update listing purchase record
         const { error: purchaseError } = await supabaseAdmin
           .from("listing_purchases")
           .update({
@@ -80,11 +136,25 @@ serve(async (req) => {
           console.error("Failed to update listing purchase:", purchaseError);
         }
 
+        // Create seller payout record
+        const platformFeePercent = 0; // 0% platform fee currently
+        const amountCents = session.amount_total || 0;
+        const platformFeeCents = Math.round(amountCents * platformFeePercent / 100);
+        const netAmountCents = amountCents - platformFeeCents;
+
+        await supabaseAdmin.from("seller_payouts").insert({
+          user_id: metadata.seller_id,
+          listing_id: metadata.listing_id,
+          amount_cents: amountCents,
+          platform_fee_cents: platformFeeCents,
+          net_amount_cents: netAmountCents,
+          status: "completed",
+          paid_at: new Date().toISOString(),
+        });
+
         // Send email to seller
         if (metadata.seller_email) {
           try {
-            const siteUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", "") || "https://muonlinehub.com";
-            
             await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
               method: "POST",
               headers: {
@@ -99,19 +169,25 @@ serve(async (req) => {
                   listingTitle: metadata.listing_title || "Your listing",
                   amount: ((session.amount_total || 0) / 100).toFixed(2),
                   buyerEmail: session.customer_details?.email || "Anonymous",
-                  siteUrl,
                 },
               }),
             });
-            console.log("Seller notification email sent to:", metadata.seller_email);
+            console.log("Seller notification email sent");
           } catch (emailError) {
             console.error("Failed to send seller notification:", emailError);
           }
         }
-      } else {
-        // Handle other payment types (premium listing, VIP, etc.)
-        const { user_id, package_id, product_id, product_type, duration_days, package_name } = metadata;
 
+        return new Response(
+          JSON.stringify({ received: true, type: "listing_purchase" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Handle LEGACY payment types (premium listing, VIP, etc.)
+      const { user_id, package_id, product_id, product_type, duration_days, package_name } = metadata;
+
+      if (product_type) {
         // Update payment record
         const { error: paymentError } = await supabaseAdmin
           .from("payments")
@@ -177,14 +253,6 @@ serve(async (req) => {
             }
             break;
 
-          case "top_banner":
-            console.log("Top banner payment completed for user:", user_id);
-            break;
-
-          case "rotating_promo":
-            console.log("Rotating promo payment completed for user:", user_id);
-            break;
-
           default:
             console.log("Unknown product type:", product_type);
         }
@@ -192,8 +260,6 @@ serve(async (req) => {
         // Send payment success email
         if (user_id && session.customer_details?.email) {
           try {
-            const siteUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", "") || "https://muonlinehub.com";
-            
             await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
               method: "POST",
               headers: {
@@ -209,11 +275,10 @@ serve(async (req) => {
                   amount: ((session.amount_total || 0) / 100).toFixed(2),
                   duration: duration_days || "7",
                   expiresAt: expiresAt.toLocaleDateString(),
-                  siteUrl,
                 },
               }),
             });
-            console.log("Payment success email sent to:", session.customer_details.email);
+            console.log("Payment success email sent");
           } catch (emailError) {
             console.error("Failed to send payment email:", emailError);
           }
