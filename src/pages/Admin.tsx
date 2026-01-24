@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { AnalyticsDashboard } from '@/components/admin/AnalyticsDashboard';
+import { PaymentAnalytics } from '@/components/admin/PaymentAnalytics';
 import { StripeSettings } from '@/components/admin/StripeSettings';
 import { PayPalSettings } from '@/components/admin/PayPalSettings';
 import { AdminSlotManager } from '@/components/admin/AdminSlotManager';
@@ -319,10 +320,13 @@ const Admin = () => {
             <AnalyticsDashboard />
           </TabsContent>
 
-          {/* Stripe Settings Tab */}
+          {/* Payment Settings Tab */}
           <TabsContent value="stripe" className="space-y-6">
-            <StripeSettings />
-            <PayPalSettings />
+            <PaymentAnalytics />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <StripeSettings />
+              <PayPalSettings />
+            </div>
           </TabsContent>
 
           {/* Premium Banners Tab */}

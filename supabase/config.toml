@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.create-listing-checkout]
 verify_jwt = false
+
+[functions.create-paypal-order]
+verify_jwt = false
