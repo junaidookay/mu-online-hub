@@ -1,20 +1,37 @@
 import { useState, useEffect } from 'react';
-import { Wallet, CheckCircle, Loader2, AlertTriangle, Save, Copy, ExternalLink } from 'lucide-react';
+import { Wallet, CheckCircle, Loader2, AlertTriangle, Save, Copy, ExternalLink, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+type ConnectionStatus = 'not_configured' | 'invalid_credentials' | 'connected' | 'checking' | 'error';
+
+interface PayPalConfig {
+  client_id_set: boolean;
+  client_secret_set: boolean;
+  webhook_id_set: boolean;
+  environment: 'sandbox' | 'live' | null;
+  last_verified: string | null;
+  platform_fee_percent: string;
+}
 
 export const PayPalSettings = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
-  const [isConfigured, setIsConfigured] = useState(false);
+  
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('not_configured');
+  const [environment, setEnvironment] = useState<'sandbox' | 'live' | null>(null);
   const [isEnabled, setIsEnabled] = useState(false);
   const [platformFeePercent, setPlatformFeePercent] = useState('0');
+  const [lastVerified, setLastVerified] = useState<string | null>(null);
+  const [config, setConfig] = useState<PayPalConfig | null>(null);
+  
   const webhookUrl = `https://jbstpivfmfxmzxkeoiwh.supabase.co/functions/v1/paypal-webhook`;
 
   useEffect(() => {
@@ -34,43 +51,79 @@ export const PayPalSettings = () => {
       
       if (data) {
         setIsEnabled(data.is_enabled || false);
-        // Parse config_value for additional settings
         if (data.config_value) {
           try {
-            const config = JSON.parse(data.config_value);
-            setPlatformFeePercent(config.platform_fee_percent || '0');
-            setIsConfigured(config.client_id_set && config.client_secret_set);
+            const parsedConfig: PayPalConfig = JSON.parse(data.config_value);
+            setConfig(parsedConfig);
+            setPlatformFeePercent(parsedConfig.platform_fee_percent || '0');
+            setEnvironment(parsedConfig.environment || null);
+            setLastVerified(parsedConfig.last_verified || null);
+            
+            if (parsedConfig.client_id_set && parsedConfig.client_secret_set) {
+              setConnectionStatus('connected');
+            } else {
+              setConnectionStatus('not_configured');
+            }
           } catch {
-            // Invalid JSON, use defaults
+            setConnectionStatus('not_configured');
           }
         }
+      } else {
+        setConnectionStatus('not_configured');
       }
     } catch (err) {
       console.error('Error fetching PayPal config:', err);
+      setConnectionStatus('error');
     }
     setIsLoading(false);
   };
 
   const checkPayPalConfiguration = async () => {
     setIsChecking(true);
+    setConnectionStatus('checking');
+    
     try {
       const { data, error } = await supabase.functions.invoke('test-paypal-config');
       
       if (error) throw error;
       
-      setIsConfigured(data?.configured || false);
-      toast({
-        title: data?.configured ? 'PayPal Configured' : 'PayPal Not Configured',
-        description: data?.configured 
-          ? 'PayPal API credentials are valid and working.' 
-          : 'Please add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to your secrets.',
-        variant: data?.configured ? 'default' : 'destructive',
-      });
+      if (data?.configured) {
+        setConnectionStatus('connected');
+        setEnvironment(data.environment || null);
+        setConfig(prev => prev ? { 
+          ...prev, 
+          client_id_set: true, 
+          client_secret_set: true,
+          webhook_id_set: data.hasWebhookId || false,
+          environment: data.environment,
+          last_verified: new Date().toISOString(),
+        } : null);
+        setLastVerified(new Date().toISOString());
+        
+        toast({
+          title: 'PayPal Connected',
+          description: `Successfully connected to PayPal ${data.environment?.toUpperCase() || ''} environment.`,
+        });
+      } else if (data?.status === 'invalid_credentials') {
+        setConnectionStatus('invalid_credentials');
+        toast({
+          title: 'Invalid Credentials',
+          description: data.message || 'PayPal credentials are invalid.',
+          variant: 'destructive',
+        });
+      } else {
+        setConnectionStatus('not_configured');
+        toast({
+          title: 'PayPal Not Configured',
+          description: data?.message || 'Please add PayPal credentials to your secrets.',
+          variant: 'destructive',
+        });
+      }
     } catch (err) {
-      setIsConfigured(false);
+      setConnectionStatus('error');
       toast({
         title: 'Configuration Check Failed',
-        description: 'Could not verify PayPal configuration. Ensure the test function is deployed.',
+        description: 'Could not verify PayPal configuration. Ensure the edge function is deployed.',
         variant: 'destructive',
       });
     }
@@ -82,15 +135,18 @@ export const PayPalSettings = () => {
     try {
       const configValue = JSON.stringify({
         platform_fee_percent: platformFeePercent,
-        client_id_set: isConfigured,
-        client_secret_set: isConfigured,
+        client_id_set: connectionStatus === 'connected',
+        client_secret_set: connectionStatus === 'connected',
+        webhook_id_set: config?.webhook_id_set || false,
+        environment: environment,
+        last_verified: lastVerified,
       });
 
       const { error } = await supabase
         .from('payment_config')
         .upsert({
           config_key: 'paypal',
-          is_enabled: isEnabled,
+          is_enabled: isEnabled && connectionStatus === 'connected',
           config_value: configValue,
         }, {
           onConflict: 'config_key'
@@ -120,31 +176,91 @@ export const PayPalSettings = () => {
     });
   };
 
+  const renderConnectionStatus = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading configuration...
+        </div>
+      );
+    }
+
+    switch (connectionStatus) {
+      case 'connected':
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-green-500">
+              <CheckCircle className="w-5 h-5" />
+              <span>PayPal Connected</span>
+              {environment && (
+                <Badge variant={environment === 'live' ? 'default' : 'secondary'} className="ml-2">
+                  {environment.toUpperCase()}
+                </Badge>
+              )}
+            </div>
+            {lastVerified && (
+              <p className="text-xs text-muted-foreground">
+                Last verified: {new Date(lastVerified).toLocaleString()}
+              </p>
+            )}
+          </div>
+        );
+      
+      case 'invalid_credentials':
+        return (
+          <div className="flex items-center gap-2 text-destructive">
+            <XCircle className="w-5 h-5" />
+            <span>Invalid Credentials</span>
+          </div>
+        );
+      
+      case 'checking':
+        return (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Testing connection...
+          </div>
+        );
+      
+      case 'error':
+        return (
+          <div className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="w-5 h-5" />
+            <span>Error checking configuration</span>
+          </div>
+        );
+      
+      default:
+        return (
+          <div className="flex items-center gap-2 text-yellow-500">
+            <AlertTriangle className="w-5 h-5" />
+            <span>PayPal Not Configured</span>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Status Card */}
       <div className="glass-card p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Wallet className="w-6 h-6 text-blue-500" />
-          <h3 className="font-display text-lg font-semibold">PayPal Payments</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <Wallet className="w-6 h-6 text-blue-500" />
+            <h3 className="font-display text-lg font-semibold">PayPal Payments</h3>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={fetchPayPalConfig}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
-
-        {isLoading ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Loading configuration...
-          </div>
-        ) : isConfigured ? (
-          <div className="flex items-center gap-2 text-green-500">
-            <CheckCircle className="w-5 h-5" />
-            <span>PayPal is configured and ready to accept payments</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-yellow-500">
-            <AlertTriangle className="w-5 h-5" />
-            <span>PayPal requires API credentials to be configured</span>
-          </div>
-        )}
+        
+        {renderConnectionStatus()}
       </div>
 
       {/* Configuration */}
@@ -157,13 +273,16 @@ export const PayPalSettings = () => {
             <div>
               <Label htmlFor="paypal_enabled" className="font-semibold">Enable PayPal Payments</Label>
               <p className="text-sm text-muted-foreground mt-1">
-                When enabled, buyers can pay using PayPal at checkout.
+                {connectionStatus === 'connected' 
+                  ? 'When enabled, buyers can pay using PayPal at checkout.'
+                  : 'Configure PayPal credentials first to enable payments.'}
               </p>
             </div>
             <Switch
               id="paypal_enabled"
               checked={isEnabled}
               onCheckedChange={setIsEnabled}
+              disabled={connectionStatus !== 'connected'}
             />
           </div>
 
@@ -215,11 +334,30 @@ export const PayPalSettings = () => {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary font-bold">4.</span>
-                <span>Add them as secrets: <code className="bg-background px-2 py-0.5 rounded">PAYPAL_CLIENT_ID</code> and <code className="bg-background px-2 py-0.5 rounded">PAYPAL_CLIENT_SECRET</code></span>
+                <span>
+                  Add them as secrets in{' '}
+                  <a 
+                    href="https://lovable.dev/projects/3ca42b71-f136-43b4-879f-a4ddfca37437/settings/secrets" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    Lovable Project Secrets
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                  :
+                </span>
+              </li>
+              <li className="pl-6">
+                <ul className="list-disc space-y-1">
+                  <li><code className="bg-background px-2 py-0.5 rounded">PAYPAL_CLIENT_ID</code></li>
+                  <li><code className="bg-background px-2 py-0.5 rounded">PAYPAL_CLIENT_SECRET</code></li>
+                  <li><code className="bg-background px-2 py-0.5 rounded">PAYPAL_WEBHOOK_ID</code> (optional, for signature verification)</li>
+                </ul>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-primary font-bold">5.</span>
-                <span>Configure the webhook URL in PayPal:</span>
+                <span>Configure the webhook URL in PayPal Developer Dashboard:</span>
               </li>
             </ol>
             
@@ -236,6 +374,37 @@ export const PayPalSettings = () => {
             <p className="text-xs text-muted-foreground mt-2">
               Subscribe to events: <code>CHECKOUT.ORDER.APPROVED</code>, <code>PAYMENT.CAPTURE.COMPLETED</code>
             </p>
+          </div>
+
+          {/* Credentials Status */}
+          <div className="p-4 bg-muted/30 rounded-lg">
+            <h5 className="font-semibold mb-3">Credentials Status</h5>
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between">
+                <span>PAYPAL_CLIENT_ID</span>
+                {config?.client_id_set ? (
+                  <Badge variant="default" className="bg-green-600">Configured</Badge>
+                ) : (
+                  <Badge variant="secondary">Not Set</Badge>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span>PAYPAL_CLIENT_SECRET</span>
+                {config?.client_secret_set ? (
+                  <Badge variant="default" className="bg-green-600">Configured</Badge>
+                ) : (
+                  <Badge variant="secondary">Not Set</Badge>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span>PAYPAL_WEBHOOK_ID</span>
+                {config?.webhook_id_set ? (
+                  <Badge variant="default" className="bg-green-600">Configured</Badge>
+                ) : (
+                  <Badge variant="outline">Optional</Badge>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* How PayPal Works */}
@@ -280,10 +449,13 @@ export const PayPalSettings = () => {
               {isChecking ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Checking...
+                  Testing...
                 </>
               ) : (
-                'Test PayPal Connection'
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Test PayPal Connection
+                </>
               )}
             </Button>
             
