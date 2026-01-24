@@ -11,6 +11,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft, Upload, Image as ImageIcon } from 'lucide-react';
 import { SEOHead } from '@/components/SEOHead';
 import { SLOT_CONFIG, getSlotConfig } from '@/lib/slotConfig';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+interface UserListing {
+  id: string;
+  title: string;
+  category: string;
+}
 
 const CreateSlotListing = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -26,6 +34,13 @@ const CreateSlotListing = () => {
   const slotConfig = getSlotConfig(slotId);
 
   const [loading, setLoading] = useState(false);
+  
+  // Slot 7 specific state
+  const [userListings, setUserListings] = useState<UserListing[]>([]);
+  const [selectedListingType, setSelectedListingType] = useState<'marketplace' | 'services'>('marketplace');
+  const [selectedListingId, setSelectedListingId] = useState<string>('');
+  const [loadingListings, setLoadingListings] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: '',
     title: '',
@@ -42,6 +57,8 @@ const CreateSlotListing = () => {
     highlight: '',
     text: '',
     link: '',
+    // Slot 7 specific
+    expiresAt: '',
   });
 
   useEffect(() => {
@@ -91,6 +108,41 @@ const CreateSlotListing = () => {
       });
     }
   }, [paymentSuccess, toast]);
+
+  // Fetch user's listings for Slot 7 (Partner Discounts)
+  useEffect(() => {
+    const fetchUserListings = async () => {
+      if (!user || slotId !== 7) return;
+      
+      setLoadingListings(true);
+      try {
+        // Fetch marketplace listings (category is seller_category type)
+        const marketplaceCategories = ['websites', 'server_files', 'antihack', 'launchers', 'custom_scripts'] as const;
+        const servicesCategories = ['web_development', 'server_development', 'graphic_design', 'video_editing', 'marketing', 'other'] as const;
+        
+        const categoriesToFetch = selectedListingType === 'marketplace' 
+          ? [...marketplaceCategories] 
+          : [...servicesCategories];
+        
+        const { data, error } = await supabase
+          .from('listings')
+          .select('id, title, category')
+          .eq('user_id', user.id)
+          .eq('is_published', true)
+          .in('category', categoriesToFetch as any);
+        
+        if (error) throw error;
+        setUserListings(data || []);
+      } catch (error) {
+        console.error('Error fetching user listings:', error);
+        setUserListings([]);
+      } finally {
+        setLoadingListings(false);
+      }
+    };
+    
+    fetchUserListings();
+  }, [user, slotId, selectedListingType]);
 
   if (!slotConfig) {
     return (
@@ -188,18 +240,48 @@ const CreateSlotListing = () => {
           break;
 
         case 'rotating_promos':
-          result = await supabase
-            .from('rotating_promos')
-            .insert({
-              text: formData.text || formData.name,
-              highlight: formData.highlight,
-              link: formData.link || formData.website,
-              promo_type: type === 'partner-discount' ? 'discount' : 'event',
-              slot_id: slotId,
-              is_active: true,
-            })
-            .select()
-            .single();
+          // Special handling for Slot 7 - Partner Discounts (linked to existing listing)
+          if (slotId === 7) {
+            if (!selectedListingId) {
+              throw new Error('Please select a listing to promote');
+            }
+            
+            // Get the selected listing's website for the link
+            const selectedListing = userListings.find(l => l.id === selectedListingId);
+            
+            result = await supabase
+              .from('rotating_promos')
+              .insert({
+                user_id: user.id,
+                listing_id: selectedListingId,
+                listing_type: selectedListingType,
+                text: formData.text,
+                highlight: formData.highlight,
+                link: formData.link || undefined,
+                promo_type: 'discount',
+                slot_id: slotId,
+                is_active: true,
+                expires_at: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
+              })
+              .select()
+              .single();
+          } else {
+            // Slot 8 - Server Events (standalone)
+            result = await supabase
+              .from('rotating_promos')
+              .insert({
+                user_id: user.id,
+                text: formData.text || formData.name,
+                highlight: formData.highlight,
+                link: formData.link || formData.website,
+                promo_type: 'event',
+                slot_id: slotId,
+                is_active: true,
+                expires_at: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
+              })
+              .select()
+              .single();
+          }
           break;
 
         default:
@@ -474,36 +556,170 @@ const CreateSlotListing = () => {
         );
 
       case 'rotating_promos':
+        // Slot 7 - Partner Discounts (linked to existing listing)
+        if (slotId === 7) {
+          return (
+            <>
+              <div>
+                <Label className="text-base font-semibold mb-3 block">
+                  What type of listing are you promoting?
+                </Label>
+                <RadioGroup
+                  value={selectedListingType}
+                  onValueChange={(value: 'marketplace' | 'services') => {
+                    setSelectedListingType(value);
+                    setSelectedListingId(''); // Reset selection when type changes
+                  }}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="marketplace" id="marketplace" />
+                    <Label htmlFor="marketplace" className="cursor-pointer">Marketplace</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="services" id="services" />
+                    <Label htmlFor="services" className="cursor-pointer">Services</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <div>
+                <Label htmlFor="listing">Select Your Listing *</Label>
+                {loadingListings ? (
+                  <div className="flex items-center gap-2 py-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading your listings...
+                  </div>
+                ) : userListings.length === 0 ? (
+                  <div className="py-2">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      You don't have any published {selectedListingType} listings yet.
+                    </p>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => navigate(selectedListingType === 'marketplace' ? '/marketplace' : '/services')}
+                    >
+                      Create a {selectedListingType} listing first
+                    </Button>
+                  </div>
+                ) : (
+                  <Select value={selectedListingId} onValueChange={setSelectedListingId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a listing to promote" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {userListings.map((listing) => (
+                        <SelectItem key={listing.id} value={listing.id}>
+                          {listing.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="text">Promotional Text *</Label>
+                <Input
+                  id="text"
+                  value={formData.text}
+                  onChange={(e) => handleChange('text', e.target.value)}
+                  placeholder="e.g., VPS Hosting Special, 50% Off Server Files"
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  A short title for your promotion
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="highlight">Highlight Text *</Label>
+                <Input
+                  id="highlight"
+                  value={formData.highlight}
+                  onChange={(e) => handleChange('highlight', e.target.value)}
+                  placeholder="e.g., -20%, Limited Time, NEW"
+                  required
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  A short badge/highlight shown prominently
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="link">Link URL (optional)</Label>
+                <Input
+                  id="link"
+                  value={formData.link}
+                  onChange={(e) => handleChange('link', e.target.value)}
+                  placeholder="https://yoursite.com/promo"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Custom link for the promotion. If left empty, links to the listing.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="expiresAt">Expiration Date (optional)</Label>
+                <Input
+                  id="expiresAt"
+                  type="date"
+                  value={formData.expiresAt}
+                  onChange={(e) => handleChange('expiresAt', e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  When should this promotion stop showing?
+                </p>
+              </div>
+            </>
+          );
+        }
+        
+        // Slot 8 - Server Events (standalone promo)
         return (
           <>
             <div>
-              <Label htmlFor="text">Promo Text *</Label>
+              <Label htmlFor="text">Event Name *</Label>
               <Input
                 id="text"
                 value={formData.text}
                 onChange={(e) => handleChange('text', e.target.value)}
-                placeholder={type === 'partner-discount' ? 'VPS Hosting Special' : 'Castle Siege Event'}
+                placeholder="Castle Siege Event"
                 required
               />
             </div>
             <div>
-              <Label htmlFor="highlight">Highlight Text *</Label>
+              <Label htmlFor="highlight">Event Time/Info *</Label>
               <Input
                 id="highlight"
                 value={formData.highlight}
                 onChange={(e) => handleChange('highlight', e.target.value)}
-                placeholder={type === 'partner-discount' ? '-20%' : 'Tonight 8PM'}
+                placeholder="Tonight 8PM"
                 required
               />
             </div>
             <div>
-              <Label htmlFor="link">Link URL</Label>
+              <Label htmlFor="link">Event Link URL</Label>
               <Input
                 id="link"
                 value={formData.link}
                 onChange={(e) => handleChange('link', e.target.value)}
-                placeholder="https://yoursite.com/promo"
+                placeholder="https://yourserver.com/events"
               />
+            </div>
+            <div>
+              <Label htmlFor="expiresAt">Event End Date</Label>
+              <Input
+                id="expiresAt"
+                type="date"
+                value={formData.expiresAt}
+                onChange={(e) => handleChange('expiresAt', e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                The promotion will auto-hide after this date
+              </p>
             </div>
           </>
         );
