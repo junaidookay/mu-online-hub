@@ -77,7 +77,7 @@ export const SLOT_CONFIG = {
   7: {
     id: 7,
     name: 'Partner Discounts',
-    description: 'Partner Discounts Section',
+    description: 'Promote your existing Marketplace or Services listings with discounts and special offers',
     createPath: '/create-listing',
     type: 'partner-discount',
     table: 'rotating_promos',
@@ -85,6 +85,7 @@ export const SLOT_CONFIG = {
     isFree: false,
     maxListings: null,
     hasRotation: true,
+    requiresExistingListing: true, // Slot 7 requires an existing listing to promote
   },
   8: {
     id: 8,

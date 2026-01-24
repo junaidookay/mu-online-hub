@@ -718,9 +718,12 @@ export type Database = {
           id: string
           is_active: boolean | null
           link: string | null
+          listing_id: string | null
+          listing_type: string | null
           promo_type: string
           slot_id: number | null
           text: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -729,9 +732,12 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           link?: string | null
+          listing_id?: string | null
+          listing_type?: string | null
           promo_type: string
           slot_id?: number | null
           text: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -740,11 +746,22 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           link?: string | null
+          listing_id?: string | null
+          listing_type?: string | null
           promo_type?: string
           slot_id?: number | null
           text?: string
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rotating_promos_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       seller_categories: {
         Row: {
