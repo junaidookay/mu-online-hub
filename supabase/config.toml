@@ -14,3 +14,24 @@ verify_jwt = false
 
 [functions.track-click]
 verify_jwt = false
+
+[functions.test-paypal-config]
+verify_jwt = false
+
+[functions.paypal-webhook]
+verify_jwt = false
+
+[functions.create-slot-checkout]
+verify_jwt = false
+
+[functions.create-connect-account]
+verify_jwt = false
+
+[functions.create-connect-login]
+verify_jwt = false
+
+[functions.get-connect-status]
+verify_jwt = false
+
+[functions.create-listing-checkout]
+verify_jwt = false

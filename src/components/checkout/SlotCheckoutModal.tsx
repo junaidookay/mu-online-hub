@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Loader2, CreditCard, Copy, CheckCircle } from 'lucide-react';
+import { Loader2, CreditCard, Copy, CheckCircle, Wallet } from 'lucide-react';
 import { isSlotFree, getSlotRedirectUrl, FREE_SLOT_ID } from '@/lib/slotConfig';
 
 interface SlotCheckoutModalProps {
@@ -24,6 +24,12 @@ interface SlotCheckoutModalProps {
   slotId: number;
   priceInCents: number;
   durationDays: number;
+}
+
+interface PaymentConfig {
+  isPayPalEnabled: boolean;
+  isPayPalConfigured: boolean;
+  isStripeConfigured: boolean;
 }
 
 export const SlotCheckoutModal = ({
@@ -41,12 +47,61 @@ export const SlotCheckoutModal = ({
   
   const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'paypal'>('stripe');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoadingConfig, setIsLoadingConfig] = useState(true);
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfig>({
+    isPayPalEnabled: false,
+    isPayPalConfigured: false,
+    isStripeConfigured: true,
+  });
   const [paypalDetails, setPaypalDetails] = useState<{
     paypalEmail: string;
     purchaseId: string;
     instructions: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Load payment configuration when modal opens
+  useEffect(() => {
+    const loadPaymentConfig = async () => {
+      if (!isOpen) return;
+      
+      setIsLoadingConfig(true);
+      try {
+        // Check PayPal configuration
+        const { data: paypalConfig } = await supabase
+          .from('payment_config')
+          .select('*')
+          .eq('config_key', 'paypal')
+          .single();
+
+        let isPayPalConfigured = false;
+        if (paypalConfig?.config_value) {
+          try {
+            const config = JSON.parse(paypalConfig.config_value);
+            isPayPalConfigured = config.client_id_set && config.client_secret_set;
+          } catch {
+            // Invalid JSON
+          }
+        }
+
+        setPaymentConfig({
+          isPayPalEnabled: paypalConfig?.is_enabled || false,
+          isPayPalConfigured,
+          isStripeConfigured: true, // Stripe is always available if STRIPE_SECRET_KEY is set
+        });
+
+        // Default to Stripe if PayPal is not available
+        if (!paypalConfig?.is_enabled || !isPayPalConfigured) {
+          setPaymentMethod('stripe');
+        }
+      } catch (err) {
+        console.error('Error loading payment config:', err);
+      }
+      setIsLoadingConfig(false);
+    };
+
+    loadPaymentConfig();
+  }, [isOpen]);
 
   const handleProceed = async () => {
     if (!user) {
@@ -135,6 +190,8 @@ export const SlotCheckoutModal = ({
     onClose();
   };
 
+  const showPayPalOption = paymentConfig.isPayPalEnabled && paymentConfig.isPayPalConfigured;
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
@@ -150,7 +207,11 @@ export const SlotCheckoutModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        {paypalDetails ? (
+        {isLoadingConfig ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : paypalDetails ? (
           <div className="space-y-4">
             <div className="p-4 bg-muted/50 rounded-lg">
               <div className="flex items-center justify-between mb-2">
@@ -190,7 +251,7 @@ export const SlotCheckoutModal = ({
             </div>
 
             <div className="p-3 bg-yellow-500/10 rounded-lg text-sm text-yellow-600 dark:text-yellow-400">
-              ⚠️ Your slot will be activated after payment verification by admin (usually within 24 hours).
+              ⚠️ Your slot will be activated after payment verification (usually within 24 hours via webhook).
             </div>
 
             <Button onClick={handleClose} className="w-full">
@@ -221,6 +282,7 @@ export const SlotCheckoutModal = ({
               onValueChange={(v) => setPaymentMethod(v as 'stripe' | 'paypal')}
               className="space-y-3"
             >
+              {/* Stripe Option - Always available */}
               <div className={`flex items-center space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${
                 paymentMethod === 'stripe' ? 'border-primary bg-primary/10' : 'border-border'
               }`}>
@@ -236,21 +298,31 @@ export const SlotCheckoutModal = ({
                 </Label>
               </div>
 
-              <div className={`flex items-center space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${
-                paymentMethod === 'paypal' ? 'border-primary bg-primary/10' : 'border-border'
-              }`}>
-                <RadioGroupItem value="paypal" id="paypal" />
-                <Label htmlFor="paypal" className="flex-1 cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-blue-500">P</span>
-                    <span className="font-medium">PayPal</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Manual verification • Up to 24h activation
-                  </p>
-                </Label>
-              </div>
+              {/* PayPal Option - Only show if configured */}
+              {showPayPalOption ? (
+                <div className={`flex items-center space-x-3 p-4 rounded-lg border cursor-pointer transition-colors ${
+                  paymentMethod === 'paypal' ? 'border-primary bg-primary/10' : 'border-border'
+                }`}>
+                  <RadioGroupItem value="paypal" id="paypal" />
+                  <Label htmlFor="paypal" className="flex-1 cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-blue-500" />
+                      <span className="font-medium">PayPal</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Pay with PayPal • Auto-activation via webhook
+                    </p>
+                  </Label>
+                </div>
+              ) : null}
             </RadioGroup>
+
+            {/* Notice if PayPal is not available */}
+            {!showPayPalOption && (
+              <p className="text-xs text-muted-foreground text-center">
+                Additional payment methods coming soon.
+              </p>
+            )}
 
             <Button
               onClick={handleProceed}
