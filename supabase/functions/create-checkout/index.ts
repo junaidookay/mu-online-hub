@@ -9,8 +9,10 @@ const corsHeaders = {
 interface CheckoutRequest {
   packageId: string;
   productId?: string;
-  successUrl: string;
-  cancelUrl: string;
+  productType?: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  metadata?: Record<string, any>;
 }
 
 serve(async (req) => {
@@ -26,7 +28,7 @@ serve(async (req) => {
       console.error("STRIPE_SECRET_KEY not configured");
       return new Response(
         JSON.stringify({ 
-          error: "Payment system not configured. Please add your Stripe secret key.",
+          error: "Payment system not configured. Please contact support.",
           needsConfiguration: true 
         }),
         { 
@@ -60,7 +62,8 @@ serve(async (req) => {
       );
     }
 
-    const { packageId, productId, successUrl, cancelUrl }: CheckoutRequest = await req.json();
+    const body = await req.json();
+    const { packageId, productId, productType, successUrl, cancelUrl, metadata }: CheckoutRequest = body;
     
     // Validate required fields
     if (!packageId) {
@@ -79,14 +82,39 @@ serve(async (req) => {
       );
     }
 
-    console.log("Checkout request:", { packageId, productId, userId: user.id });
+    console.log("Checkout request:", { packageId, productId, productType, userId: user.id });
 
-    // Fetch package details - use maybeSingle to get proper error
-    const { data: pkg, error: pkgError } = await supabaseClient
-      .from("pricing_packages")
-      .select("*")
-      .eq("id", packageId)
-      .maybeSingle();
+    // Determine which table to fetch from based on productType
+    let pkg: any = null;
+    let pkgError: any = null;
+    
+    if (productType === "listing_publish") {
+      // Fetch from listing_packages table for listing publications
+      const result = await supabaseClient
+        .from("listing_packages")
+        .select("*")
+        .eq("id", packageId)
+        .eq("is_active", true)
+        .maybeSingle();
+      
+      pkg = result.data;
+      pkgError = result.error;
+      
+      if (pkg) {
+        // Map listing_packages fields to expected format
+        pkg.product_type = "listing_publish";
+      }
+    } else {
+      // Default: fetch from pricing_packages table
+      const result = await supabaseClient
+        .from("pricing_packages")
+        .select("*")
+        .eq("id", packageId)
+        .maybeSingle();
+      
+      pkg = result.data;
+      pkgError = result.error;
+    }
 
     if (pkgError) {
       console.error("Package query error:", pkgError);
@@ -97,12 +125,17 @@ serve(async (req) => {
     }
 
     if (!pkg) {
-      console.error("Package not found:", packageId);
+      console.error("Package not found:", packageId, "productType:", productType);
       return new Response(
         JSON.stringify({ error: "The selected package is no longer available", code: "INVALID_PACKAGE_ID" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Build success/cancel URLs with defaults
+    const baseUrl = Deno.env.get("SUPABASE_URL")?.replace(".supabase.co", "") || "";
+    const defaultSuccessUrl = successUrl || `${baseUrl}/seller-dashboard?payment=success`;
+    const defaultCancelUrl = cancelUrl || `${baseUrl}/seller-dashboard?payment=cancelled`;
 
     // Import Stripe dynamically
     const Stripe = (await import("https://esm.sh/stripe@14.21.0")).default;
@@ -140,34 +173,51 @@ serve(async (req) => {
         },
       ],
       mode: "payment",
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+      success_url: defaultSuccessUrl,
+      cancel_url: defaultCancelUrl,
       metadata: {
         user_id: user.id,
         package_id: packageId,
-        product_id: productId || "",
-        product_type: pkg.product_type,
+        product_id: productId || metadata?.listing_id || "",
+        product_type: pkg.product_type || productType || "slot",
         duration_days: pkg.duration_days.toString(),
+        listing_id: metadata?.listing_id || "",
       },
     });
 
-    // Create payment record
+    // Create admin client for service operations
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    await supabaseAdmin.from("payments").insert({
-      user_id: user.id,
-      stripe_session_id: session.id,
-      amount: pkg.price_cents,
-      currency: "usd",
-      status: "pending",
-      product_type: pkg.product_type,
-      product_id: productId || null,
-      duration_days: pkg.duration_days,
-      metadata: { package_name: pkg.name },
-    });
+    // Create appropriate purchase record based on product type
+    if (productType === "listing_publish" && metadata?.listing_id) {
+      // Create listing_purchases record for listing publication
+      await supabaseAdmin.from("listing_purchases").insert({
+        user_id: user.id,
+        listing_id: metadata.listing_id,
+        package_id: packageId,
+        stripe_session_id: session.id,
+        amount: pkg.price_cents,
+        currency: "usd",
+        status: "pending",
+        duration_days: pkg.duration_days,
+      });
+    } else {
+      // Create general payments record
+      await supabaseAdmin.from("payments").insert({
+        user_id: user.id,
+        stripe_session_id: session.id,
+        amount: pkg.price_cents,
+        currency: "usd",
+        status: "pending",
+        product_type: pkg.product_type || productType || "slot",
+        product_id: productId || null,
+        duration_days: pkg.duration_days,
+        metadata: { package_name: pkg.name },
+      });
+    }
 
     console.log("Checkout session created:", session.id);
 

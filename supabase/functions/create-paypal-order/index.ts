@@ -6,39 +6,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-/**
- * Create PayPal Order Edge Function
- * 
- * Creates a PayPal order via the Orders API for proper buyer redirect flow.
- * Returns an approval URL that redirects the buyer to PayPal to complete payment.
- * 
- * Supports:
- * - Slot purchases
- * - Listing purchases
- * 
- * The order includes:
- * - Reference ID for tracking (format: slot_<slot_id>_<user_id> or listing_<listing_id>_<user_id>)
- * - Return URLs for success/cancel
- * - Item details from the package/listing
- */
-
 interface CreatePayPalOrderRequest {
-  type: 'slot' | 'listing';
+  type: 'slot' | 'listing' | 'listing_publish';
   packageId?: string;
   slotId?: number;
   listingId?: string;
   successUrl: string;
   cancelUrl: string;
-}
-
-interface PayPalOrderResponse {
-  id: string;
-  status: string;
-  links: Array<{
-    href: string;
-    rel: string;
-    method: string;
-  }>;
 }
 
 serve(async (req) => {
@@ -78,24 +52,24 @@ serve(async (req) => {
       console.error("PayPal credentials not configured");
       return new Response(
         JSON.stringify({ 
-          error: "PayPal is not configured",
+          error: "PayPal is not configured. Please contact support.",
           needsConfiguration: true 
         }),
         { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Verify PayPal is enabled in config
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Check PayPal is enabled in config
     const { data: paypalConfig } = await supabaseAdmin
       .from("payment_config")
-      .select("*")
-      .eq("config_key", "paypal_enabled")
-      .single();
+      .select("is_enabled")
+      .eq("config_key", "paypal")
+      .maybeSingle();
 
     if (!paypalConfig?.is_enabled) {
       return new Response(
@@ -118,7 +92,7 @@ serve(async (req) => {
 
     console.log("Creating PayPal order:", { type, packageId, slotId, listingId, userId: user.id });
 
-    // Determine environment (sandbox vs live)
+    // Determine environment
     const isSandbox = clientId.startsWith("AV") || clientId.startsWith("sb-") || clientId.includes("sandbox");
     const paypalBaseUrl = isSandbox 
       ? "https://api-m.sandbox.paypal.com" 
@@ -151,15 +125,55 @@ serve(async (req) => {
     let itemName = "";
     let itemDescription = "";
     let referenceId = "";
+    let durationDays = 30;
 
     // Prepare order details based on type
-    if (type === 'slot' && packageId && slotId) {
-      // Fetch package details
+    if (type === 'listing_publish' && packageId && listingId) {
+      // Fetch listing package details
+      const { data: pkg, error: pkgError } = await supabaseClient
+        .from("listing_packages")
+        .select("*")
+        .eq("id", packageId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (pkgError || !pkg) {
+        console.error("Listing package not found:", pkgError);
+        return new Response(
+          JSON.stringify({ error: "Package not found", code: "INVALID_PACKAGE_ID" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Fetch listing to verify ownership
+      const { data: listing, error: listingError } = await supabaseClient
+        .from("listings")
+        .select("id, title, user_id")
+        .eq("id", listingId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (listingError || !listing) {
+        console.error("Listing not found:", listingError);
+        return new Response(
+          JSON.stringify({ error: "Listing not found or unauthorized" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      amount = pkg.price_cents / 100;
+      itemName = `Publish: ${pkg.name}`;
+      itemDescription = `Publish "${listing.title}" for ${pkg.duration_days} days`;
+      referenceId = `listing_publish_${listingId}_${user.id.substring(0, 8)}`;
+      durationDays = pkg.duration_days;
+
+    } else if (type === 'slot' && packageId && slotId) {
+      // Fetch pricing package details
       const { data: pkg, error: pkgError } = await supabaseClient
         .from("pricing_packages")
         .select("*")
         .eq("id", packageId)
-        .single();
+        .maybeSingle();
 
       if (pkgError || !pkg) {
         console.error("Package not found:", pkgError);
@@ -169,7 +183,6 @@ serve(async (req) => {
         );
       }
 
-      // Verify slot matches package
       if (pkg.slot_id !== slotId) {
         return new Response(
           JSON.stringify({ error: "Package slot mismatch" }),
@@ -177,13 +190,9 @@ serve(async (req) => {
         );
       }
 
-      // Check if slot 6 (free) - should not go through checkout
       if (slotId === 6) {
         return new Response(
-          JSON.stringify({ 
-            error: "This slot is free and does not require payment",
-            isFree: true 
-          }),
+          JSON.stringify({ error: "This slot is free and does not require payment", isFree: true }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -191,24 +200,17 @@ serve(async (req) => {
       amount = pkg.price_cents / 100;
       itemName = pkg.name;
       itemDescription = pkg.description || `Slot ${slotId} - ${pkg.name}`;
-      referenceId = `slot_${slotId}_${user.id}`;
-
-      // Create pending slot purchase
-      await supabaseAdmin.from("slot_purchases").insert({
-        user_id: user.id,
-        slot_id: slotId,
-        package_id: packageId,
-        product_type: pkg.product_type || `slot_${slotId}`,
-        is_active: false,
-      });
+      referenceId = `slot_${slotId}_${user.id.substring(0, 8)}`;
+      durationDays = pkg.duration_days;
 
     } else if (type === 'listing' && listingId) {
-      // Fetch listing details
+      // Fetch listing details for purchase
       const { data: listing, error: listingError } = await supabaseClient
         .from("listings")
-        .select("*, profiles!listings_user_id_fkey(display_name)")
+        .select("*")
         .eq("id", listingId)
-        .single();
+        .eq("is_published", true)
+        .maybeSingle();
 
       if (listingError || !listing) {
         console.error("Listing not found:", listingError);
@@ -218,25 +220,21 @@ serve(async (req) => {
         );
       }
 
-      amount = listing.price;
+      amount = listing.price_usd || 0;
       itemName = listing.title;
       itemDescription = listing.description?.substring(0, 127) || listing.title;
-      referenceId = `listing_${listingId}_${user.id}`;
-
-      // Create pending listing purchase
-      await supabaseAdmin.from("listing_purchases").insert({
-        listing_id: listingId,
-        user_id: user.id,
-        seller_id: listing.user_id,
-        amount: Math.round(amount * 100),
-        currency: "usd",
-        status: "pending",
-        duration_days: 30,
-      });
+      referenceId = `listing_${listingId}_${user.id.substring(0, 8)}`;
 
     } else {
       return new Response(
         JSON.stringify({ error: "Invalid order type or missing parameters" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (amount <= 0) {
+      return new Response(
+        JSON.stringify({ error: "Invalid amount" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -251,22 +249,24 @@ serve(async (req) => {
           currency_code: "USD",
           value: amount.toFixed(2),
           breakdown: {
-            item_total: {
-              currency_code: "USD",
-              value: amount.toFixed(2),
-            },
+            item_total: { currency_code: "USD", value: amount.toFixed(2) },
           },
         },
         items: [{
           name: itemName.substring(0, 127),
           description: itemDescription.substring(0, 127),
           quantity: "1",
-          unit_amount: {
-            currency_code: "USD",
-            value: amount.toFixed(2),
-          },
+          unit_amount: { currency_code: "USD", value: amount.toFixed(2) },
           category: "DIGITAL_GOODS",
         }],
+        custom_id: JSON.stringify({
+          user_id: user.id,
+          package_id: packageId || null,
+          listing_id: listingId || null,
+          slot_id: slotId || null,
+          type: type,
+          duration_days: durationDays,
+        }),
       }],
       payment_source: {
         paypal: {
@@ -283,7 +283,7 @@ serve(async (req) => {
       },
     };
 
-    console.log("Creating PayPal order with payload:", JSON.stringify(orderPayload, null, 2));
+    console.log("Creating PayPal order:", orderPayload.purchase_units[0].reference_id);
 
     const orderResponse = await fetch(`${paypalBaseUrl}/v2/checkout/orders`, {
       method: "POST",
@@ -299,19 +299,20 @@ serve(async (req) => {
       const orderError = await orderResponse.text();
       console.error("Failed to create PayPal order:", orderError);
       return new Response(
-        JSON.stringify({ error: "Failed to create PayPal order", details: orderError }),
+        JSON.stringify({ error: "Failed to create PayPal order" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const orderData: PayPalOrderResponse = await orderResponse.json();
+    const orderData = await orderResponse.json();
     console.log("PayPal order created:", orderData.id);
 
     // Find the approval URL
-    const approvalLink = orderData.links.find(link => link.rel === "payer-action");
+    const approvalLink = orderData.links?.find((link: any) => link.rel === "payer-action") ||
+                         orderData.links?.find((link: any) => link.rel === "approve");
     
     if (!approvalLink) {
-      console.error("No approval link found in PayPal response:", orderData);
+      console.error("No approval link in response:", orderData);
       return new Response(
         JSON.stringify({ error: "No approval URL returned from PayPal" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -323,9 +324,9 @@ serve(async (req) => {
       user_id: user.id,
       amount: Math.round(amount * 100),
       currency: "usd",
-      product_type: type === 'slot' ? `slot_${slotId}` : "listing_purchase",
-      product_id: type === 'slot' ? packageId : listingId,
-      duration_days: 30,
+      product_type: type === 'listing_publish' ? 'listing_publish' : type === 'slot' ? `slot_${slotId}` : "listing_purchase",
+      product_id: type === 'listing_publish' ? listingId : type === 'slot' ? packageId : listingId,
+      duration_days: durationDays,
       status: "pending",
       metadata: {
         payment_provider: "paypal",
@@ -333,6 +334,7 @@ serve(async (req) => {
         reference_id: referenceId,
         slot_id: slotId,
         listing_id: listingId,
+        package_id: packageId,
       },
     });
 
