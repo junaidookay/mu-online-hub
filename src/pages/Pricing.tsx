@@ -5,12 +5,13 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShoppingBag, Wrench, Trophy, Type, Image, Calendar, Percent, Sparkles } from 'lucide-react';
+import { Loader2, ShoppingBag, Wrench, Trophy, Type, Image, Calendar, Percent, Sparkles, FileText } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SEOHead } from '@/components/SEOHead';
 import { SLOT_CONFIG, getSlotRedirectUrl, isSlotFree, FREE_SLOT_ID } from '@/lib/slotConfig';
 import { SlotCheckoutModal } from '@/components/checkout/SlotCheckoutModal';
 import { Badge } from '@/components/ui/badge';
+import { CreateDraftModal } from '@/components/pricing/CreateDraftModal';
 
 interface PricingPackage {
   id: string;
@@ -33,6 +34,8 @@ const Pricing = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPackage, setSelectedPackage] = useState<PricingPackage | null>(null);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [draftModalOpen, setDraftModalOpen] = useState(false);
+  const [draftSlotId, setDraftSlotId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchPackages();
@@ -77,6 +80,31 @@ const Pricing = () => {
     // Open checkout modal
     setSelectedPackage(pkg);
     setCheckoutOpen(true);
+  };
+
+  const handleCreateDraft = (slotId: number) => {
+    if (!user) {
+      toast({
+        title: 'Login Required',
+        description: 'Please sign in to create a draft.',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
+    setDraftSlotId(slotId);
+    setDraftModalOpen(true);
+  };
+
+  const handleDraftCreated = () => {
+    setDraftModalOpen(false);
+    setDraftSlotId(null);
+    toast({
+      title: 'Draft Created!',
+      description: 'Your draft has been saved. Go to your dashboard to complete and publish it.',
+    });
+    navigate('/dashboard');
   };
 
   const handleFreeSlotAccess = () => {
@@ -157,6 +185,11 @@ const Pricing = () => {
             Boost your server's visibility with our premium features. Each package unlocks a specific 
             homepage slot for maximum exposure.
           </p>
+          {user && (
+            <p className="text-sm text-primary mt-2">
+              💡 Tip: Create a draft first, then pay to publish when you're ready!
+            </p>
+          )}
         </div>
 
         {/* Free Slot Banner */}
@@ -206,6 +239,23 @@ const Pricing = () => {
                   {SLOT_CONFIG[slotId as keyof typeof SLOT_CONFIG]?.description || ''}
                 </p>
               </div>
+
+              {/* Create Draft Button for logged-in users */}
+              {user && (
+                <div className="mb-6 text-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => handleCreateDraft(slotId)}
+                    className="gap-2"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Create Draft First (Pay Later)
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Create your listing as a draft, then pay when you're ready to go live.
+                  </p>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {groupedPackages[slotId]?.map((pkg) => (
@@ -246,7 +296,7 @@ const Pricing = () => {
                       onClick={() => handlePurchase(pkg)}
                       className="w-full btn-fantasy-primary"
                     >
-                      Purchase Now
+                      Purchase & Publish Now
                     </Button>
                   </div>
                 ))}
@@ -278,6 +328,19 @@ const Pricing = () => {
           slotId={selectedPackage.slot_id!}
           priceInCents={selectedPackage.price_cents}
           durationDays={selectedPackage.duration_days}
+        />
+      )}
+
+      {/* Create Draft Modal */}
+      {draftSlotId && (
+        <CreateDraftModal
+          isOpen={draftModalOpen}
+          onClose={() => {
+            setDraftModalOpen(false);
+            setDraftSlotId(null);
+          }}
+          slotId={draftSlotId}
+          onSuccess={handleDraftCreated}
         />
       )}
     </div>
