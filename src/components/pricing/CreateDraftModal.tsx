@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { getSlotConfig, SLOT_CONFIG } from '@/lib/slotConfig';
+import { ImageUpload } from '@/components/upload/ImageUpload';
 
 interface CreateDraftModalProps {
   isOpen: boolean;
@@ -303,12 +304,14 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="bannerUrl">Banner Image URL</Label>
-              <Input
-                id="bannerUrl"
-                value={formData.bannerUrl}
-                onChange={(e) => handleChange('bannerUrl', e.target.value)}
-                placeholder="https://your-image-url.com/banner.jpg"
+              <Label>Banner Image</Label>
+              <ImageUpload
+                bucket="ad-banners"
+                userId={user?.id || ''}
+                onUploadComplete={(url) => handleChange('bannerUrl', url)}
+                currentImageUrl={formData.bannerUrl}
+                maxSizeMB={5}
+                aspectRatio="468x60"
               />
             </div>
           </>
@@ -382,6 +385,17 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
                 value={formData.features}
                 onChange={(e) => handleChange('features', e.target.value)}
                 placeholder="PVP Focused, Custom Wings"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Server Banner</Label>
+              <ImageUpload
+                bucket="server-banners"
+                userId={user?.id || ''}
+                onUploadComplete={(url) => handleChange('bannerUrl', url)}
+                currentImageUrl={formData.bannerUrl}
+                maxSizeMB={5}
+                aspectRatio="728x90"
               />
             </div>
           </>
