@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,23 +13,18 @@ import { SEOHead } from '@/components/SEOHead';
 import Header from '@/components/layout/Header';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { categoryLabels } from '@/lib/categories';
 
-const categoryLabels: Record<string, string> = {
-  websites: 'Websites',
-  server_files: 'Server Files',
-  antihack: 'Antihack',
-  launchers: 'Launchers',
-  custom_scripts: 'Custom Scripts',
-};
+type SellerCategory = Database["public"]["Enums"]["seller_category"];
 
 const CreateListing = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState<SellerCategory | ''>('');
   const [priceUsd, setPriceUsd] = useState('');
   const [website, setWebsite] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<SellerCategory[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -57,8 +53,9 @@ const CreateListing = () => {
       .eq('user_id', user.id);
 
     if (data && data.length > 0) {
-      setCategories(data.map(c => c.category));
-      setCategory(data[0].category);
+      const fetchedCategories = data.map((c) => c.category);
+      setCategories(fetchedCategories);
+      setCategory(fetchedCategories[0] ?? '');
     } else {
       navigate('/seller-onboarding');
     }
@@ -83,7 +80,7 @@ const CreateListing = () => {
           user_id: user.id,
           title: title.trim(),
           description: description.trim() || null,
-          category: category as 'websites' | 'server_files' | 'antihack' | 'launchers' | 'custom_scripts',
+          category: category as SellerCategory,
           price_usd: priceUsd ? parseFloat(priceUsd) : null,
           website: website.trim() || null,
           image_url: imageUrl || null,
@@ -135,7 +132,7 @@ const CreateListing = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="category">Category *</Label>
-              <Select value={category} onValueChange={setCategory}>
+              <Select value={category} onValueChange={(value) => setCategory(value as SellerCategory)}>
                 <SelectTrigger className="bg-muted/50">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
