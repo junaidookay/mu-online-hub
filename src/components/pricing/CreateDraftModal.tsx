@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 import { getSlotConfig, SLOT_CONFIG } from '@/lib/slotConfig';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 
@@ -26,12 +26,27 @@ interface UserListing {
   category: string;
 }
 
+interface PricingPackage {
+  id: string;
+  name: string;
+  price_cents: number;
+  duration_days: number;
+  slot_id: number | null;
+  description: string | null;
+}
+
 export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateDraftModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const slotConfig = getSlotConfig(slotId);
 
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'package' | 'details'>('package');
+  
+  // Package selection state
+  const [packages, setPackages] = useState<PricingPackage[]>([]);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+  const [selectedPackageId, setSelectedPackageId] = useState<string>('');
   
   // Slot 7 specific state
   const [userListings, setUserListings] = useState<UserListing[]>([]);
@@ -57,6 +72,37 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
     link: '',
     expiresAt: '',
   });
+
+  // Fetch packages for this slot
+  useEffect(() => {
+    const fetchPackages = async () => {
+      if (!isOpen) return;
+      
+      setLoadingPackages(true);
+      try {
+        const { data, error } = await supabase
+          .from('pricing_packages')
+          .select('id, name, price_cents, duration_days, slot_id, description')
+          .eq('slot_id', slotId)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
+        
+        if (error) throw error;
+        setPackages(data || []);
+        
+        // Auto-select the first package
+        if (data && data.length > 0) {
+          setSelectedPackageId(data[0].id);
+        }
+      } catch (error) {
+        console.error('Error fetching packages:', error);
+      } finally {
+        setLoadingPackages(false);
+      }
+    };
+    
+    fetchPackages();
+  }, [isOpen, slotId]);
 
   // Fetch user's listings for Slot 7
   useEffect(() => {
@@ -103,20 +149,49 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
     fetchUserListings();
   }, [user, slotId, selectedListingType]);
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setStep('package');
+      setSelectedPackageId('');
+      setFormData({
+        name: '',
+        title: '',
+        description: '',
+        website: '',
+        bannerUrl: '',
+        season: '',
+        part: '',
+        expRate: '',
+        openDate: '',
+        features: '',
+        highlight: '',
+        text: '',
+        link: '',
+        expiresAt: '',
+      });
+      setSelectedListingId('');
+    }
+  }, [isOpen]);
+
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const selectedPackage = packages.find(p => p.id === selectedPackageId);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !slotConfig) return;
+    if (!user || !slotConfig || !selectedPackageId) return;
 
     setLoading(true);
 
     try {
       let result;
+      let draftId: string | null = null;
+      const tableName = slotConfig.table;
 
-      switch (slotConfig.table) {
+      switch (tableName) {
         case 'advertisements':
           result = await supabase
             .from('advertisements')
@@ -128,10 +203,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
               banner_url: formData.bannerUrl || null,
               ad_type: slotId === 1 ? 'marketplace' : 'services',
               slot_id: slotId,
-              is_active: false, // DRAFT - inactive until paid
+              is_active: false,
               vip_level: 'none',
             })
-            .select()
+            .select('id')
             .single();
           break;
 
@@ -149,10 +224,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
               open_date: formData.openDate || null,
               features: formData.features ? formData.features.split(',').map(f => f.trim()) : [],
               slot_id: slotId,
-              is_active: false, // DRAFT - inactive until paid
+              is_active: false,
               is_premium: slotId === 3,
             })
-            .select()
+            .select('id')
             .single();
           break;
 
@@ -167,15 +242,13 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
               version: formData.season || 'S17',
               open_date: formData.openDate || null,
               slot_id: slotId,
-              is_active: false, // DRAFT - inactive until paid
+              is_active: false,
             })
-            .select()
+            .select('id')
             .single();
           break;
 
         case 'premium_banners':
-          // premium_banners doesn't have user_id, so we'll use a different approach
-          // For now, skip premium banners draft creation or handle differently
           toast({
             title: 'Not Supported',
             description: 'Main Banner drafts require admin assistance. Please contact support.',
@@ -186,7 +259,6 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
 
         case 'rotating_promos':
           if (slotId === 7) {
-            // Partner Discounts - must link to existing listing
             if (!selectedListingId) {
               throw new Error('Please select a listing to promote');
             }
@@ -221,13 +293,12 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
                 link: promoLink,
                 promo_type: 'discount',
                 slot_id: slotId,
-                is_active: false, // DRAFT - inactive until paid
+                is_active: false,
                 expires_at: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
               })
-              .select()
+              .select('id')
               .single();
           } else {
-            // Slot 8 - Server Events
             result = await supabase
               .from('rotating_promos')
               .insert({
@@ -237,10 +308,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
                 link: formData.link || formData.website,
                 promo_type: 'event',
                 slot_id: slotId,
-                is_active: false, // DRAFT - inactive until paid
+                is_active: false,
                 expires_at: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
               })
-              .select()
+              .select('id')
               .single();
           }
           break;
@@ -253,6 +324,13 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
         throw result.error;
       }
 
+      draftId = result?.data?.id;
+
+      toast({
+        title: 'Draft Created!',
+        description: `Your draft has been saved. Go to your dashboard to pay and publish when ready.`,
+      });
+
       onSuccess();
     } catch (error: any) {
       console.error('Failed to create draft:', error);
@@ -264,6 +342,76 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderPackageSelection = () => {
+    if (loadingPackages) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    if (packages.length === 0) {
+      return (
+        <div className="text-center py-4 text-muted-foreground">
+          No packages available for this slot.
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <Label className="text-base font-semibold">Select Duration Package</Label>
+        <div className="grid gap-3">
+          {packages.map((pkg) => (
+            <div
+              key={pkg.id}
+              onClick={() => setSelectedPackageId(pkg.id)}
+              className={`relative flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
+                selectedPackageId === pkg.id
+                  ? 'border-primary bg-primary/10 ring-1 ring-primary'
+                  : 'border-border hover:border-primary/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                  selectedPackageId === pkg.id ? 'border-primary bg-primary' : 'border-muted-foreground'
+                }`}>
+                  {selectedPackageId === pkg.id && <Check className="w-3 h-3 text-primary-foreground" />}
+                </div>
+                <div>
+                  <div className="font-medium">{pkg.name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {pkg.duration_days} days
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-bold text-primary">
+                  ${(pkg.price_cents / 100).toFixed(2)}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="flex gap-3 pt-4">
+          <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={() => setStep('details')}
+            disabled={!selectedPackageId}
+            className="flex-1"
+          >
+            Continue
+          </Button>
+        </div>
+      </div>
+    );
   };
 
   const renderFormFields = () => {
@@ -449,7 +597,6 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
 
       case 'rotating_promos':
         if (slotId === 7) {
-          // Partner Discounts
           return (
             <>
               <div className="space-y-2">
@@ -531,7 +678,6 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
             </>
           );
         } else {
-          // Server Events (Slot 8)
           return (
             <>
               <div className="space-y-2">
@@ -590,23 +736,45 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
         <DialogHeader>
           <DialogTitle>Create Draft: {slotName}</DialogTitle>
           <DialogDescription>
-            Fill in the details for your draft. You can pay and publish later from your dashboard.
+            {step === 'package' 
+              ? 'Select a package for your listing. You can pay when you publish from your dashboard.'
+              : 'Fill in the details for your draft.'
+            }
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {renderFormFields()}
+        {step === 'package' ? (
+          renderPackageSelection()
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Show selected package summary */}
+            {selectedPackage && (
+              <div className="p-3 bg-primary/10 rounded-lg border border-primary/30">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{selectedPackage.name}</span>
+                  <span className="font-bold text-primary">
+                    ${(selectedPackage.price_cents / 100).toFixed(2)}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {selectedPackage.duration_days} days • Pay when publishing
+                </div>
+              </div>
+            )}
 
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
-              {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Save as Draft
-            </Button>
-          </div>
-        </form>
+            {renderFormFields()}
+
+            <div className="flex gap-3 pt-4">
+              <Button type="button" variant="outline" onClick={() => setStep('package')} className="flex-1">
+                Back
+              </Button>
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Save as Draft
+              </Button>
+            </div>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );

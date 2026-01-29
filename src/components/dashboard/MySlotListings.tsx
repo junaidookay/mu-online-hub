@@ -79,6 +79,8 @@ export const MySlotListings = () => {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PricingPackage | null>(null);
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
+  const [selectedDraftId, setSelectedDraftId] = useState<string | null>(null);
+  const [selectedDraftType, setSelectedDraftType] = useState<SlotListing['type'] | null>(null);
   const [packages, setPackages] = useState<PricingPackage[]>([]);
 
   useEffect(() => {
@@ -272,6 +274,8 @@ export const MySlotListings = () => {
     const cheapestPackage = slotPackages[0]; // Already sorted by price
     setSelectedPackage(cheapestPackage);
     setSelectedSlotId(listing.slot_id);
+    setSelectedDraftId(listing.id);
+    setSelectedDraftType(listing.type);
     setCheckoutOpen(true);
   };
 
@@ -552,12 +556,16 @@ export const MySlotListings = () => {
             setCheckoutOpen(false);
             setSelectedPackage(null);
             setSelectedSlotId(null);
+            setSelectedDraftId(null);
+            setSelectedDraftType(null);
           }}
           packageId={selectedPackage.id}
           packageName={selectedPackage.name}
           slotId={selectedSlotId}
           priceInCents={selectedPackage.price_cents}
           durationDays={selectedPackage.duration_days}
+          draftId={selectedDraftId || undefined}
+          draftType={selectedDraftType || undefined}
         />
       )}
 

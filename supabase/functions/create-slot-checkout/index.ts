@@ -12,6 +12,8 @@ interface SlotCheckoutRequest {
   successUrl: string;
   cancelUrl: string;
   paymentMethod?: 'stripe' | 'paypal';
+  draftId?: string;
+  draftType?: string;
 }
 
 serve(async (req) => {
@@ -43,8 +45,8 @@ serve(async (req) => {
       );
     }
 
-    const { packageId, slotId, successUrl, cancelUrl, paymentMethod = 'stripe' }: SlotCheckoutRequest = await req.json();
-    console.log("Slot checkout request:", { packageId, slotId, userId: user.id, paymentMethod });
+    const { packageId, slotId, successUrl, cancelUrl, paymentMethod = 'stripe', draftId, draftType }: SlotCheckoutRequest = await req.json();
+    console.log("Slot checkout request:", { packageId, slotId, userId: user.id, paymentMethod, draftId, draftType });
 
     // Fetch package details
     const { data: pkg, error: pkgError } = await supabaseClient
@@ -145,6 +147,8 @@ serve(async (req) => {
           product_type: "slot_purchase",
           duration_days: pkg.duration_days.toString(),
           payment_provider: "stripe",
+          draft_id: draftId || "",
+          draft_type: draftType || "",
         },
       });
 

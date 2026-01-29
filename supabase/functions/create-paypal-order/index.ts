@@ -13,6 +13,8 @@ interface CreatePayPalOrderRequest {
   listingId?: string;
   successUrl: string;
   cancelUrl: string;
+  draftId?: string;
+  draftType?: string;
 }
 
 serve(async (req) => {
@@ -87,10 +89,12 @@ serve(async (req) => {
       slotId, 
       listingId, 
       successUrl, 
-      cancelUrl 
+      cancelUrl,
+      draftId,
+      draftType,
     }: CreatePayPalOrderRequest = await req.json();
 
-    console.log("Creating PayPal order:", { type, packageId, slotId, listingId, userId: user.id });
+    console.log("Creating PayPal order:", { type, packageId, slotId, listingId, draftId, draftType, userId: user.id });
 
     // Determine environment
     const isSandbox = clientId.startsWith("AV") || clientId.startsWith("sb-") || clientId.includes("sandbox");
@@ -266,6 +270,8 @@ serve(async (req) => {
           slot_id: slotId || null,
           type: type,
           duration_days: durationDays,
+          draft_id: draftId || null,
+          draft_type: draftType || null,
         }),
       }],
       payment_source: {
@@ -335,6 +341,8 @@ serve(async (req) => {
         slot_id: slotId,
         listing_id: listingId,
         package_id: packageId,
+        draft_id: draftId,
+        draft_type: draftType,
       },
     });
 
