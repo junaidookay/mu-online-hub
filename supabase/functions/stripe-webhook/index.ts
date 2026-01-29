@@ -1,10 +1,82 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
+
+// Helper function to activate draft listings for a specific slot
+async function activateDraftListingsForSlot(
+  supabase: SupabaseClient,
+  userId: string,
+  slotId: number,
+  expiresAt: string
+): Promise<{ activated: string[], errors: string[] }> {
+  const activated: string[] = [];
+  const errors: string[] = [];
+
+  // Map slot IDs to their respective tables
+  const slotTableMap: Record<number, string> = {
+    1: 'advertisements', // Marketplace Ads
+    2: 'advertisements', // Services Ads
+    3: 'servers',        // Top 50 Servers
+    4: 'premium_text_servers', // Premium Text Servers
+    5: 'premium_banners', // Main Banner (admin only)
+    6: 'servers',        // Upcoming Servers
+    7: 'rotating_promos', // Partner Discounts
+    8: 'rotating_promos', // Server Events
+  };
+
+  const tableName = slotTableMap[slotId];
+  if (!tableName) {
+    errors.push(`Unknown slot ID: ${slotId}`);
+    return { activated, errors };
+  }
+
+  // Skip premium_banners as they don't have user_id
+  if (tableName === 'premium_banners') {
+    return { activated, errors };
+  }
+
+  // Find inactive (draft) listings for this user and slot
+  const { data: drafts, error: fetchError } = await supabase
+    .from(tableName)
+    .select('id')
+    .eq('user_id', userId)
+    .eq('slot_id', slotId)
+    .eq('is_active', false);
+
+  if (fetchError) {
+    errors.push(`Failed to fetch drafts: ${fetchError.message}`);
+    return { activated, errors };
+  }
+
+  if (!drafts || drafts.length === 0) {
+    console.log(`No drafts found for user ${userId} in slot ${slotId}`);
+    return { activated, errors };
+  }
+
+  // Activate each draft
+  for (const draft of drafts) {
+    const { error: updateError } = await supabase
+      .from(tableName)
+      .update({
+        is_active: true,
+        expires_at: expiresAt,
+      })
+      .eq('id', draft.id);
+
+    if (updateError) {
+      errors.push(`Failed to activate ${draft.id}: ${updateError.message}`);
+    } else {
+      activated.push(draft.id);
+      console.log(`Activated draft ${draft.id} in ${tableName}`);
+    }
+  }
+
+  return { activated, errors };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -68,6 +140,7 @@ serve(async (req) => {
         const durationDays = parseInt(metadata.duration_days || "30");
         const now = new Date();
         const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+        const userId = metadata.user_id;
 
         // Update slot purchase to active
         const { error: slotError } = await supabaseAdmin
@@ -84,6 +157,18 @@ serve(async (req) => {
           console.error("Failed to update slot purchase:", slotError);
         } else {
           console.log("Slot purchase activated successfully");
+        }
+
+        // ACTIVATE DRAFT LISTINGS for this user and slot
+        // Find and activate any draft (inactive) listings for this slot
+        if (userId) {
+          const activationResult = await activateDraftListingsForSlot(
+            supabaseAdmin,
+            userId,
+            slotId,
+            expiresAt.toISOString()
+          );
+          console.log("Draft activation result:", activationResult);
         }
 
         // Send confirmation email

@@ -11,7 +11,8 @@ import {
   ExternalLink,
   Calendar,
   CreditCard,
-  DollarSign
+  DollarSign,
+  Pencil
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { SLOT_CONFIG, getSlotConfig } from '@/lib/slotConfig';
@@ -27,6 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { SlotCheckoutModal } from '@/components/checkout/SlotCheckoutModal';
+import { EditDraftModal } from '@/components/dashboard/EditDraftModal';
 
 interface SlotPurchase {
   id: string;
@@ -68,6 +70,10 @@ export const MySlotListings = () => {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<SlotListing | null>(null);
+  
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [listingToEdit, setListingToEdit] = useState<SlotListing | null>(null);
   
   // Checkout modal state
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -349,6 +355,17 @@ export const MySlotListings = () => {
 
                   <div className="flex items-center gap-2">
                     <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setListingToEdit(listing);
+                        setEditModalOpen(true);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
                       variant="default"
                       size="sm"
                       onClick={() => handlePayAndPublish(listing)}
@@ -541,6 +558,27 @@ export const MySlotListings = () => {
           slotId={selectedSlotId}
           priceInCents={selectedPackage.price_cents}
           durationDays={selectedPackage.duration_days}
+        />
+      )}
+
+      {/* Edit Draft Modal */}
+      {listingToEdit && (
+        <EditDraftModal
+          isOpen={editModalOpen}
+          onClose={() => {
+            setEditModalOpen(false);
+            setListingToEdit(null);
+          }}
+          listing={listingToEdit}
+          onSuccess={() => {
+            setEditModalOpen(false);
+            setListingToEdit(null);
+            fetchData();
+            toast({
+              title: 'Draft Updated',
+              description: 'Your changes have been saved.',
+            });
+          }}
         />
       )}
     </div>
