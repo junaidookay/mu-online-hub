@@ -45,17 +45,80 @@ const Dashboard = () => {
     title: '', description: '', website: '', banner_url: ''
   });
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isActivating, setIsActivating] = useState(false);
 
+  // Handle payment success - activate draft directly (no webhook needed)
   useEffect(() => {
-    // Check for payment success
-    if (searchParams.get('payment') === 'success') {
-      toast({
-        title: 'Payment Successful!',
-        description: 'Your premium feature has been activated.',
-      });
-    }
-  }, [searchParams, toast]);
+    const activateDraft = async () => {
+      const paymentStatus = searchParams.get('payment');
+      const draftId = searchParams.get('draftId');
+      const draftType = searchParams.get('draftType');
+      const slotId = searchParams.get('slot');
+      const durationDays = searchParams.get('durationDays');
+
+      // Clear params first to prevent re-running
+      if (paymentStatus) {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('payment');
+        newParams.delete('draftId');
+        newParams.delete('draftType');
+        newParams.delete('slot');
+        newParams.delete('durationDays');
+        setSearchParams(newParams, { replace: true });
+      }
+
+      if (paymentStatus === 'success' && draftId && draftType && slotId && durationDays) {
+        setIsActivating(true);
+        try {
+          const response = await supabase.functions.invoke('activate-draft', {
+            body: {
+              draftId,
+              draftType,
+              slotId: parseInt(slotId),
+              durationDays: parseInt(durationDays),
+            },
+          });
+
+          if (response.error || response.data?.error) {
+            console.error('Activation error:', response.error || response.data?.error);
+            toast({
+              title: 'Activation Issue',
+              description: 'Payment received but listing activation may be delayed. Please refresh in a moment.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: 'Listing Published!',
+              description: 'Your listing is now live and visible on the homepage.',
+            });
+          }
+        } catch (err) {
+          console.error('Activation failed:', err);
+          toast({
+            title: 'Processing',
+            description: 'Your payment was successful. Your listing will be activated shortly.',
+          });
+        } finally {
+          setIsActivating(false);
+        }
+      } else if (paymentStatus === 'success') {
+        // Generic success without draft info
+        toast({
+          title: 'Payment Successful!',
+          description: 'Your premium feature has been activated.',
+        });
+      } else if (paymentStatus === 'cancelled') {
+        toast({
+          title: 'Payment Cancelled',
+          description: 'Your payment was cancelled. No charges were made.',
+          variant: 'destructive',
+        });
+      }
+    };
+
+    activateDraft();
+  }, [searchParams, setSearchParams, toast]);
 
   useEffect(() => {
     if (!isLoading && !user) {

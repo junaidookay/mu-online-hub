@@ -123,8 +123,11 @@ export const SlotCheckoutModal = ({
     setIsProcessing(true);
 
     try {
-      // Success URL should go to dashboard to show the now-active listing
-      const successUrl = `${window.location.origin}/dashboard?payment=success&slot=${slotId}`;
+      // Success URL includes draft info for direct activation (bypasses webhook)
+      const draftParams = draftId && draftType 
+        ? `&draftId=${draftId}&draftType=${draftType}&durationDays=${durationDays}` 
+        : '';
+      const successUrl = `${window.location.origin}/dashboard?payment=success&slot=${slotId}${draftParams}`;
       const cancelUrl = `${window.location.origin}/dashboard?payment=cancelled`;
 
       // Use PayPal Orders API for proper redirect flow
