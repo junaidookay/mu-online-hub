@@ -151,7 +151,7 @@ export const StripeSettings = () => {
       <div className="glass-card p-4 border-l-4 border-blue-500/50">
         <p className="text-sm text-muted-foreground">
           <strong className="text-blue-500">Note:</strong> Secrets are managed securely in your backend. 
-          To add or update secrets, go to your project settings in the Lovable dashboard.
+          To add or update secrets, go to your project settings in the Mu Nexus Hub dashboard.
         </p>
       </div>
     </div>

@@ -73,7 +73,7 @@ serve(async (req) => {
     }
 
     // Get the origin from the request or use a default
-    const origin = req.headers.get("origin") || "https://your-app.lovableproject.com";
+    const origin = req.headers.get("origin") || "https://your-app.muonlinehub.com";
 
     // Create an account link for onboarding
     const accountLink = await stripe.accountLinks.create({

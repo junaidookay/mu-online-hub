@@ -337,12 +337,12 @@ export const PayPalSettings = () => {
                 <span>
                   Add them as secrets in{' '}
                   <a 
-                    href="https://lovable.dev/projects/3ca42b71-f136-43b4-879f-a4ddfca37437/settings/secrets" 
+                    href="https://muonlinehub.com/projects/3ca42b71-f136-43b4-879f-a4ddfca37437/settings/secrets" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-primary hover:underline inline-flex items-center gap-1"
                   >
-                    Lovable Project Secrets
+                    Mu Nexus Hub Project Secrets
                     <ExternalLink className="w-3 h-3" />
                   </a>
                   :
