@@ -6,7 +6,44 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
-// Helper function to activate draft listings for a specific slot
+// Helper function to activate a specific draft listing by ID
+async function activateDraftById(
+  supabase: SupabaseClient,
+  draftId: string,
+  draftType: string,
+  expiresAt: string
+): Promise<{ success: boolean, error?: string }> {
+  // Map draft types to table names
+  const typeTableMap: Record<string, string> = {
+    'server': 'servers',
+    'advertisement': 'advertisements',
+    'text_server': 'premium_text_servers',
+    'promo': 'rotating_promos',
+  };
+
+  const tableName = typeTableMap[draftType];
+  if (!tableName) {
+    return { success: false, error: `Unknown draft type: ${draftType}` };
+  }
+
+  const { error } = await supabase
+    .from(tableName)
+    .update({
+      is_active: true,
+      expires_at: expiresAt,
+    })
+    .eq('id', draftId);
+
+  if (error) {
+    console.error(`Failed to activate draft ${draftId}:`, error);
+    return { success: false, error: error.message };
+  }
+
+  console.log(`Activated draft ${draftId} in ${tableName}, expires at ${expiresAt}`);
+  return { success: true };
+}
+
+// Helper function to activate draft listings for a specific slot (fallback)
 async function activateDraftListingsForSlot(
   supabase: SupabaseClient,
   userId: string,
@@ -159,9 +196,24 @@ serve(async (req) => {
           console.log("Slot purchase activated successfully");
         }
 
-        // ACTIVATE DRAFT LISTINGS for this user and slot
-        // Find and activate any draft (inactive) listings for this slot
-        if (userId) {
+        // ACTIVATE DRAFT LISTING
+        // Check if specific draft ID was provided
+        const draftId = metadata.draft_id;
+        const draftType = metadata.draft_type;
+        
+        if (draftId && draftType) {
+          // Activate specific draft by ID
+          console.log(`Activating specific draft: ${draftId} (type: ${draftType})`);
+          const result = await activateDraftById(
+            supabaseAdmin,
+            draftId,
+            draftType,
+            expiresAt.toISOString()
+          );
+          console.log("Specific draft activation result:", result);
+        } else if (userId) {
+          // Fallback: activate any drafts for this user and slot
+          console.log(`No draft ID provided, activating all drafts for user ${userId} in slot ${slotId}`);
           const activationResult = await activateDraftListingsForSlot(
             supabaseAdmin,
             userId,

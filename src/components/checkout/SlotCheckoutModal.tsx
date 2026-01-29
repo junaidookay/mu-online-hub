@@ -25,6 +25,8 @@ interface SlotCheckoutModalProps {
   slotId: number;
   priceInCents: number;
   durationDays: number;
+  draftId?: string;
+  draftType?: 'server' | 'advertisement' | 'banner' | 'promo' | 'text_server';
 }
 
 interface PaymentConfig {
@@ -41,6 +43,8 @@ export const SlotCheckoutModal = ({
   slotId,
   priceInCents,
   durationDays,
+  draftId,
+  draftType,
 }: SlotCheckoutModalProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -119,8 +123,9 @@ export const SlotCheckoutModal = ({
     setIsProcessing(true);
 
     try {
-      const successUrl = `${window.location.origin}${getSlotRedirectUrl(slotId, packageId)}&payment=success`;
-      const cancelUrl = `${window.location.origin}/pricing?payment=cancelled`;
+      // Success URL should go to dashboard to show the now-active listing
+      const successUrl = `${window.location.origin}/dashboard?payment=success&slot=${slotId}`;
+      const cancelUrl = `${window.location.origin}/dashboard?payment=cancelled`;
 
       // Use PayPal Orders API for proper redirect flow
       if (paymentMethod === 'paypal') {
@@ -131,6 +136,8 @@ export const SlotCheckoutModal = ({
             slotId,
             successUrl,
             cancelUrl,
+            draftId,
+            draftType,
           },
         });
 
@@ -177,6 +184,8 @@ export const SlotCheckoutModal = ({
             successUrl,
             cancelUrl,
             paymentMethod: 'stripe',
+            draftId,
+            draftType,
           },
         });
 

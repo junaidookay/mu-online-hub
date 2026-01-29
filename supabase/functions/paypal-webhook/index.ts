@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +21,43 @@ const corsHeaders = {
  * 
  * If PayPal is not configured, logs the event but does not activate listings.
  */
+
+// Helper function to activate a specific draft listing by ID
+async function activateDraftById(
+  supabase: SupabaseClient,
+  draftId: string,
+  draftType: string,
+  expiresAt: string
+): Promise<{ success: boolean, error?: string }> {
+  // Map draft types to table names
+  const typeTableMap: Record<string, string> = {
+    'server': 'servers',
+    'advertisement': 'advertisements',
+    'text_server': 'premium_text_servers',
+    'promo': 'rotating_promos',
+  };
+
+  const tableName = typeTableMap[draftType];
+  if (!tableName) {
+    return { success: false, error: `Unknown draft type: ${draftType}` };
+  }
+
+  const { error } = await supabase
+    .from(tableName)
+    .update({
+      is_active: true,
+      expires_at: expiresAt,
+    })
+    .eq('id', draftId);
+
+  if (error) {
+    console.error(`Failed to activate draft ${draftId}:`, error);
+    return { success: false, error: error.message };
+  }
+
+  console.log(`Activated draft ${draftId} in ${tableName}, expires at ${expiresAt}`);
+  return { success: true };
+}
 
 interface PayPalWebhookEvent {
   id: string;
@@ -212,14 +249,37 @@ serve(async (req) => {
           payerEmail,
         });
 
-        // Parse reference ID to get user_id, slot_id, or listing_id
-        // Expected format: "slot_<slot_id>_<user_id>" or "listing_<listing_id>_<user_id>"
+        // Parse custom_id to get user_id, slot_id, listing_id, and draft info
+        // custom_id is JSON from create-paypal-order
         let userId: string | null = null;
         let slotId: number | null = null;
         let listingId: string | null = null;
+        let draftId: string | null = null;
+        let draftType: string | null = null;
+        let durationDays = 30;
         let productType = "unknown";
 
-        if (referenceId) {
+        // Try to parse custom_id as JSON first (new format)
+        const customId = purchaseUnit?.custom_id;
+        if (customId) {
+          try {
+            const customData = JSON.parse(customId);
+            userId = customData.user_id || null;
+            slotId = customData.slot_id || null;
+            listingId = customData.listing_id || null;
+            draftId = customData.draft_id || null;
+            draftType = customData.draft_type || null;
+            durationDays = customData.duration_days || 30;
+            productType = customData.type === 'slot' ? `slot_${slotId}` : customData.type || "unknown";
+            console.log("Parsed custom_id:", { userId, slotId, listingId, draftId, draftType, durationDays });
+          } catch {
+            // Not JSON, try legacy format
+            console.log("custom_id is not JSON, trying legacy format");
+          }
+        }
+
+        // Fall back to parsing reference_id (legacy format)
+        if (!userId && referenceId) {
           const parts = referenceId.split("_");
           if (parts[0] === "slot" && parts.length >= 3) {
             slotId = parseInt(parts[1]);
@@ -315,9 +375,9 @@ serve(async (req) => {
             .single();
 
           if (slotPurchase) {
-            const durationDays = slotPurchase.pricing_packages?.duration_days || 30;
+            const pkgDurationDays = slotPurchase.pricing_packages?.duration_days || durationDays;
             const expiresAt = new Date();
-            expiresAt.setDate(expiresAt.getDate() + durationDays);
+            expiresAt.setDate(expiresAt.getDate() + pkgDurationDays);
 
             // Activate the slot purchase
             const { error: activateError } = await supabaseAdmin
@@ -334,6 +394,19 @@ serve(async (req) => {
               console.error("Failed to activate slot purchase:", activateError);
             } else {
               console.log("Slot purchase activated via PayPal:", slotPurchase.id);
+
+              // ACTIVATE DRAFT LISTING
+              if (draftId && draftType) {
+                // Activate specific draft by ID
+                console.log(`Activating specific draft: ${draftId} (type: ${draftType})`);
+                const result = await activateDraftById(
+                  supabaseAdmin,
+                  draftId,
+                  draftType,
+                  expiresAt.toISOString()
+                );
+                console.log("Draft activation result:", result);
+              }
 
               // Create notification for user
               await supabaseAdmin.from("notifications").insert({
