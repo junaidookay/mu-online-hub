@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.create-setup-intent]
 verify_jwt = false
+
+[functions.activate-draft]
+verify_jwt = false
