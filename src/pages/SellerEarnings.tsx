@@ -97,8 +97,8 @@ export default function SellerEarnings() {
       .eq('user_id', user?.id)
       .single();
 
-    setPayouts((payoutsData as any) || []);
-    setSales((salesData as any) || []);
+    setPayouts((payoutsData ?? []) as EarningsTransaction[]);
+    setSales((salesData ?? []) as Purchase[]);
     setStats(statsData);
     setIsLoading(false);
   };

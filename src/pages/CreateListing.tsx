@@ -93,8 +93,9 @@ const CreateListing = () => {
 
       toast({ title: 'Success', description: 'Listing created! You can now publish it to the marketplace.' });
       navigate('/seller-dashboard');
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to create listing';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -141,7 +142,7 @@ const CreateListing = () => {
                 <SelectContent>
                   {categories.map(cat => (
                     <SelectItem key={cat} value={cat}>
-                      {categoryLabels[cat]}
+                      {categoryLabels[cat] ?? cat}
                     </SelectItem>
                   ))}
                 </SelectContent>

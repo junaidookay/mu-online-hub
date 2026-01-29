@@ -217,8 +217,9 @@ const PublishListing = () => {
           window.location.href = data.approvalUrl;
         }
       }
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to process payment';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
       setIsProcessing(false);
     }
   };

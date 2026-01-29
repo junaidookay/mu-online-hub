@@ -22,6 +22,7 @@ const TopServers = () => {
       const { data } = await supabase
         .from('servers')
         .select('*')
+        .eq('slot_id', 3)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(50);

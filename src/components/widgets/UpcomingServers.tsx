@@ -22,6 +22,7 @@ const UpcomingServers = () => {
       const { data } = await supabase
         .from('servers')
         .select('*')
+        .eq('slot_id', 6)
         .eq('is_active', true)
         .order('open_date', { ascending: true })
         .limit(10);

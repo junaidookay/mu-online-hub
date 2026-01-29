@@ -81,6 +81,13 @@ const EditListing = () => {
       return;
     }
 
+    setCategories((prev) => {
+      const prevSet = new Set(prev);
+      if (listing.category && !prevSet.has(listing.category)) {
+        return [...prev, listing.category];
+      }
+      return prev;
+    });
     setTitle(listing.title);
     setDescription(listing.description || '');
     setCategory(listing.category);
@@ -120,8 +127,9 @@ const EditListing = () => {
 
       toast({ title: 'Success', description: 'Listing updated successfully!' });
       navigate('/seller-dashboard');
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update listing';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -187,7 +195,7 @@ const EditListing = () => {
                 <SelectContent>
                   {categories.map(cat => (
                     <SelectItem key={cat} value={cat}>
-                      {categoryLabels[cat]}
+                      {categoryLabels[cat] ?? cat}
                     </SelectItem>
                   ))}
                 </SelectContent>

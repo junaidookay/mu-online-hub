@@ -58,6 +58,7 @@ interface Review {
   reviewer: {
     display_name: string | null;
     avatar_url: string | null;
+    user_id?: string;
   } | null;
 }
 
@@ -117,22 +118,31 @@ const SellerProfile = () => {
     // Fetch reviews for this seller
     const { data: reviewsData } = await supabase
       .from('reviews')
-      .select(`
-        id,
-        rating,
-        title,
-        content,
-        created_at,
-        is_verified_purchase,
-        listing_id,
-        reviewer:profiles!reviews_reviewer_id_fkey(display_name, avatar_url)
-      `)
+      .select('id, rating, title, content, created_at, is_verified_purchase, listing_id, reviewer_id')
       .eq('seller_id', sellerId)
       .order('created_at', { ascending: false })
       .limit(20);
 
     if (reviewsData) {
-      setReviews(reviewsData as any);
+      const reviewerIds = Array.from(new Set(reviewsData.map((r) => r.reviewer_id)));
+      const { data: reviewerProfiles } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, avatar_url')
+        .in('user_id', reviewerIds);
+
+      const profileById = new Map((reviewerProfiles || []).map((p) => [p.user_id, p]));
+      const normalizedReviews: Review[] = reviewsData.map((r) => ({
+        id: r.id,
+        rating: r.rating,
+        title: r.title,
+        content: r.content,
+        created_at: r.created_at,
+        is_verified_purchase: Boolean(r.is_verified_purchase),
+        listing_id: r.listing_id,
+        reviewer: profileById.get(r.reviewer_id) || null,
+      }));
+
+      setReviews(normalizedReviews);
       // Calculate average rating
       if (reviewsData.length > 0) {
         const avg = reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length;

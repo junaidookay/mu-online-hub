@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,8 @@ import { Loader2, Check } from 'lucide-react';
 import { getSlotConfig, SLOT_CONFIG } from '@/lib/slotConfig';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 
+type SellerCategory = Database["public"]["Enums"]["seller_category"];
+
 interface CreateDraftModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,7 +26,7 @@ interface CreateDraftModalProps {
 interface UserListing {
   id: string;
   title: string;
-  category: string;
+  category: SellerCategory;
 }
 
 interface PricingPackage {
@@ -122,7 +125,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
           'media', 'promotion', 'streaming', 'content_creators', 'event_master', 'marketing_growth'
         ] as const;
         
-        const categoriesToFetch = selectedListingType === 'marketplace' 
+        const categoriesToFetch: SellerCategory[] = selectedListingType === 'marketplace' 
           ? [...marketplaceCategories] 
           : [...servicesCategories];
         
@@ -132,7 +135,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
           .eq('user_id', user.id)
           .eq('is_published', true)
           .eq('is_active', true)
-          .in('category', categoriesToFetch as any);
+          .in('category', categoriesToFetch);
         
         if (error) throw error;
         
@@ -332,11 +335,12 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
       });
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create draft:', error);
+      const message = error instanceof Error ? error.message : 'Failed to create draft.';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create draft.',
+        description: message,
         variant: 'destructive',
       });
     } finally {

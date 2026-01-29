@@ -197,7 +197,7 @@ export const AdminSlotManager = () => {
         const slot7Promos = promos.filter(p => p.slot_id === 7 && p.listing_id);
         const listingIds = slot7Promos.map(p => p.listing_id).filter(Boolean);
         
-        let listingTitles: Record<string, string> = {};
+        const listingTitles: Record<string, string> = {};
         if (listingIds.length > 0) {
           const { data: listings } = await supabase
             .from('listings')

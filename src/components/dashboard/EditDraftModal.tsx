@@ -91,7 +91,7 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
         let data: ServerData | AdvertisementData | TextServerData | PromoData | null = null;
 
         switch (listing.type) {
-          case 'server':
+          case 'server': {
             const { data: serverData } = await supabase
               .from('servers')
               .select('name, website, banner_url, season, part, exp_rate, open_date, features')
@@ -112,8 +112,9 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
               });
             }
             break;
+          }
 
-          case 'advertisement':
+          case 'advertisement': {
             const { data: adData } = await supabase
               .from('advertisements')
               .select('title, description, website, banner_url')
@@ -131,8 +132,9 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
               });
             }
             break;
+          }
 
-          case 'text_server':
+          case 'text_server': {
             const { data: textData } = await supabase
               .from('premium_text_servers')
               .select('name, website, exp_rate, version, open_date')
@@ -150,8 +152,9 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
               });
             }
             break;
+          }
 
-          case 'promo':
+          case 'promo': {
             const { data: promoData } = await supabase
               .from('rotating_promos')
               .select('text, highlight, link')
@@ -168,6 +171,7 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
               });
             }
             break;
+          }
         }
       } catch (error) {
         console.error('Error fetching draft data:', error);
@@ -261,11 +265,12 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
       });
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update draft:', error);
+      const message = error instanceof Error ? error.message : 'Failed to update draft.';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update draft.',
+        description: message,
         variant: 'destructive',
       });
     } finally {

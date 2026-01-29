@@ -2,22 +2,26 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft, Upload, Image as ImageIcon } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { SEOHead } from '@/components/SEOHead';
 import { SLOT_CONFIG, getSlotConfig } from '@/lib/slotConfig';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ImageUpload } from '@/components/upload/ImageUpload';
+
+type SellerCategory = Database["public"]["Enums"]["seller_category"];
 
 interface UserListing {
   id: string;
   title: string;
-  category: string;
+  category: SellerCategory;
 }
 
 const CreateSlotListing = () => {
@@ -130,7 +134,7 @@ const CreateSlotListing = () => {
           'media', 'promotion', 'streaming', 'content_creators', 'event_master', 'marketing_growth'
         ] as const;
         
-        const categoriesToFetch = selectedListingType === 'marketplace' 
+        const categoriesToFetch: SellerCategory[] = selectedListingType === 'marketplace' 
           ? [...marketplaceCategories] 
           : [...servicesCategories];
         
@@ -141,7 +145,7 @@ const CreateSlotListing = () => {
           .eq('user_id', user.id)
           .eq('is_published', true)
           .eq('is_active', true)
-          .in('category', categoriesToFetch as any);
+          .in('category', categoriesToFetch);
         
         if (error) throw error;
         
@@ -179,6 +183,15 @@ const CreateSlotListing = () => {
     if (!user) return;
 
     setLoading(true);
+    if (slotConfig.table === 'premium_banners' && !formData.bannerUrl) {
+      toast({
+        title: 'Banner Required',
+        description: 'Please upload a banner image before submitting.',
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       let result;
@@ -209,7 +222,7 @@ const CreateSlotListing = () => {
               user_id: user.id,
               name: formData.name,
               website: formData.website,
-              banner_url: formData.bannerUrl,
+              banner_url: slotId === 6 ? null : formData.bannerUrl,
               season: formData.season || 'Season 17',
               part: formData.part || 'Part 1',
               exp_rate: formData.expRate || '1000x',
@@ -333,11 +346,12 @@ const CreateSlotListing = () => {
       });
 
       navigate('/dashboard');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create listing:', error);
+      const message = error instanceof Error ? error.message : 'Failed to create listing.';
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create listing.',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -393,16 +407,16 @@ const CreateSlotListing = () => {
               />
             </div>
             <div>
-              <Label htmlFor="bannerUrl">Banner Image URL</Label>
-              <Input
-                id="bannerUrl"
-                value={formData.bannerUrl}
-                onChange={(e) => handleChange('bannerUrl', e.target.value)}
-                placeholder="https://your-image-url.com/banner.jpg"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Enter a direct URL to your banner image
-              </p>
+              <Label>Banner Image</Label>
+              {user && (
+                <ImageUpload
+                  bucket="ad-banners"
+                  userId={user.id}
+                  onUploadComplete={(url) => handleChange('bannerUrl', url)}
+                  currentImageUrl={formData.bannerUrl}
+                  aspectRatio="268x60"
+                />
+              )}
             </div>
           </>
         );
@@ -479,18 +493,20 @@ const CreateSlotListing = () => {
                 placeholder="PVP Focused, Custom Wings, Long-term"
               />
             </div>
-            <div>
-              <Label htmlFor="bannerUrlServer">Banner Image URL</Label>
-              <Input
-                id="bannerUrlServer"
-                value={formData.bannerUrl}
-                onChange={(e) => handleChange('bannerUrl', e.target.value)}
-                placeholder="https://your-image-url.com/banner.jpg"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Enter a direct URL to your banner image
-              </p>
-            </div>
+            {slotId !== 6 && (
+              <div>
+                <Label>Banner Image</Label>
+                {user && (
+                  <ImageUpload
+                    bucket="server-banners"
+                    userId={user.id}
+                    onUploadComplete={(url) => handleChange('bannerUrl', url)}
+                    currentImageUrl={formData.bannerUrl}
+                    aspectRatio="468x60"
+                  />
+                )}
+              </div>
+            )}
           </>
         );
 
@@ -575,17 +591,19 @@ const CreateSlotListing = () => {
               />
             </div>
             <div>
-              <Label htmlFor="bannerUrlPremium">Banner Image URL (Required) *</Label>
+              <Label>Banner Image (Required) *</Label>
               <p className="text-xs text-muted-foreground mb-2">
                 Recommended size: 800x200 pixels, landscape format
               </p>
-              <Input
-                id="bannerUrlPremium"
-                value={formData.bannerUrl}
-                onChange={(e) => handleChange('bannerUrl', e.target.value)}
-                placeholder="https://your-image-url.com/banner.jpg"
-                required
-              />
+              {user && (
+                <ImageUpload
+                  bucket="banners"
+                  userId={user.id}
+                  onUploadComplete={(url) => handleChange('bannerUrl', url)}
+                  currentImageUrl={formData.bannerUrl}
+                  aspectRatio="800x200"
+                />
+              )}
             </div>
           </>
         );

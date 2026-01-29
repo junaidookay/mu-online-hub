@@ -87,12 +87,12 @@ export const ImageUpload = ({
         description: 'Your image has been uploaded successfully.',
       });
 
-    } catch (error: any) {
+  } catch (error: unknown) {
       console.error('Upload error:', error);
       setPreview(currentImageUrl || null);
       toast({
         title: 'Upload Failed',
-        description: error.message || 'Failed to upload image. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to upload image. Please try again.',
         variant: 'destructive',
       });
     } finally {

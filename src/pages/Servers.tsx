@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
+import { useNavigate } from 'react-router-dom';
+import { getSlotRedirectUrl } from '@/lib/slotConfig';
 
 type ServerType = Tables<'servers'>;
 
@@ -20,12 +22,14 @@ const Servers = () => {
   const [servers, setServers] = useState<ServerType[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const { trackServerClick } = useClickTracking();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchServers = async () => {
       const { data } = await supabase
         .from('servers')
         .select('*')
+        .eq('slot_id', 3)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       
@@ -66,7 +70,7 @@ const Servers = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => navigate(getSlotRedirectUrl(3))}>
               <Plus size={18} className="mr-2" />
               Add Your Server
             </Button>

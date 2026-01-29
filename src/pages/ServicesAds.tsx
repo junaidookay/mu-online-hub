@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
+import { useNavigate } from 'react-router-dom';
+import { getSlotRedirectUrl } from '@/lib/slotConfig';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -20,6 +22,7 @@ const ServicesAds = () => {
   const [services, setServices] = useState<Advertisement[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const { trackAdClick } = useClickTracking();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -67,7 +70,7 @@ const ServicesAds = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => navigate(getSlotRedirectUrl(2))}>
               <Plus size={18} className="mr-2" />
               Place Your Ad
             </Button>

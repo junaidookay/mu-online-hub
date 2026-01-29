@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -70,13 +70,10 @@ const RotatingPromos = ({ type }: RotatingPromosProps) => {
   if (!currentItem) return null;
 
   // For Slot 7 (discount), link to the attached listing if available
-  const getPromoLink = useCallback(() => {
-    if ('listing_id' in currentItem && currentItem.listing_id) {
-      // Link to the attached listing page
-      return currentItem.link || `/listing/${currentItem.listing_id}`;
-    }
-    return currentItem.link || '#';
-  }, [currentItem]);
+  const promoLink =
+    'listing_id' in currentItem && currentItem.listing_id
+      ? currentItem.link || `/listing/${currentItem.listing_id}`
+      : currentItem.link || '#';
 
   return (
     <div className="glass-card p-3 overflow-hidden">
@@ -86,7 +83,7 @@ const RotatingPromos = ({ type }: RotatingPromosProps) => {
       {/* Single horizontal text row - ticker style */}
       <div className="relative h-6 overflow-hidden">
         <a 
-          href={getPromoLink()}
+          href={promoLink}
           key={currentIndex}
           className="absolute inset-0 flex items-center justify-between animate-slide-up hover:text-primary transition-colors"
         >

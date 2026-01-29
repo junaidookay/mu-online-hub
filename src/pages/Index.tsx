@@ -23,18 +23,16 @@ const Index = () => {
           <div className="lg:col-span-3">
             <PremiumTextServers />
           </div>
-          <div className="lg:col-span-6">
+          <div className="lg:col-span-6 space-y-4">
             <PremiumBanner />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <RotatingPromos type="discount" />
+              <RotatingPromos type="event" />
+            </div>
           </div>
           <div className="lg:col-span-3">
             <UpcomingServers />
           </div>
-        </div>
-
-        {/* Rotating Promo Bars */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <RotatingPromos type="discount" />
-          <RotatingPromos type="event" />
         </div>
 
         {/* Category Cards */}

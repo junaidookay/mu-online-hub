@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SEOHead } from '@/components/SEOHead';
+import { ImageUpload } from '@/components/upload/ImageUpload';
 import { 
   Plus, 
   Trash2, 
@@ -355,14 +356,16 @@ const Admin = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="bannerImage">Image URL</Label>
-                  <Input
-                    id="bannerImage"
-                    placeholder="https://..."
-                    value={newBanner.image_url}
-                    onChange={(e) => setNewBanner({ ...newBanner, image_url: e.target.value })}
-                    className="bg-muted/50"
-                  />
+                  <Label>Image</Label>
+                  {user && (
+                    <ImageUpload
+                      bucket="banners"
+                      userId={user.id}
+                      onUploadComplete={(url) => setNewBanner({ ...newBanner, image_url: url })}
+                      currentImageUrl={newBanner.image_url}
+                      aspectRatio="800x200"
+                    />
+                  )}
                 </div>
               </div>
               <Button onClick={handleAddBanner} className="btn-fantasy-primary gap-2">
@@ -440,13 +443,16 @@ const Admin = () => {
                   />
                 </div>
                 <div>
-                  <Label>Image URL</Label>
-                  <Input
-                    placeholder="https://..."
-                    value={newPartner.image_url}
-                    onChange={(e) => setNewPartner({ ...newPartner, image_url: e.target.value })}
-                    className="bg-muted/50"
-                  />
+                  <Label>Image</Label>
+                  {user && (
+                    <ImageUpload
+                      bucket="banners"
+                      userId={user.id}
+                      onUploadComplete={(url) => setNewPartner({ ...newPartner, image_url: url })}
+                      currentImageUrl={newPartner.image_url}
+                      aspectRatio="400x400"
+                    />
+                  )}
                 </div>
               </div>
               <Button onClick={handleAddPartner} className="btn-fantasy-primary gap-2">
@@ -526,13 +532,16 @@ const Admin = () => {
                   />
                 </div>
                 <div>
-                  <Label>Image URL</Label>
-                  <Input
-                    placeholder="https://..."
-                    value={newProject.image_url}
-                    onChange={(e) => setNewProject({ ...newProject, image_url: e.target.value })}
-                    className="bg-muted/50"
-                  />
+                  <Label>Image</Label>
+                  {user && (
+                    <ImageUpload
+                      bucket="banners"
+                      userId={user.id}
+                      onUploadComplete={(url) => setNewProject({ ...newProject, image_url: url })}
+                      currentImageUrl={newProject.image_url}
+                      aspectRatio="400x400"
+                    />
+                  )}
                 </div>
               </div>
               <Button onClick={handleAddProject} className="btn-fantasy-primary gap-2">
