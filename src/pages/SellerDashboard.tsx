@@ -273,6 +273,18 @@ const SellerDashboard = () => {
                 <CardContent className="pt-6">
                   <p className="text-2xl font-bold text-muted-foreground">{categories.length}</p>
                   <p className="text-xs text-muted-foreground">Categories</p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {categories.slice(0, 4).map((cat) => (
+                      <Badge key={cat} variant="secondary" className="text-[10px]">
+                        {categoryLabels[cat] || cat}
+                      </Badge>
+                    ))}
+                    {categories.length > 4 && (
+                      <Badge variant="outline" className="text-[10px]">
+                        +{categories.length - 4}
+                      </Badge>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>

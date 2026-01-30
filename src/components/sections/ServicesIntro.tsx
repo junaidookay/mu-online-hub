@@ -37,7 +37,7 @@ const ServicesIntro = () => {
             </Link>
           </Button>
           <Button asChild variant="outline" className="btn-fantasy-outline flex-1">
-            <Link to="/pricing" className="flex items-center justify-center gap-2">
+            <Link to="/seller-onboarding" className="flex items-center justify-center gap-2">
               <Plus className="w-4 h-4" />
               List Your Service
             </Link>

@@ -1,22 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { SEOHead } from '@/components/SEOHead';
 import { Loader2, Store, Briefcase } from 'lucide-react';
-import { marketplaceCategories, serviceCategories, type CategoryId } from '@/lib/categories';
+import { marketplaceCategories, serviceCategories } from '@/lib/categories';
+
+type SellerCategory = Database["public"]["Enums"]["seller_category"];
 
 const SellerOnboarding = () => {
-  const [selectedCategories, setSelectedCategories] = useState<CategoryId[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<SellerCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const toggleCategory = (categoryId: CategoryId) => {
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchSelectedCategories = async () => {
+      setIsLoadingCategories(true);
+      const { data, error } = await supabase
+        .from('seller_categories')
+        .select('category')
+        .eq('user_id', user.id);
+
+      if (!error && data) {
+        setSelectedCategories(data.map((c) => c.category));
+      }
+      setIsLoadingCategories(false);
+    };
+
+    fetchSelectedCategories();
+  }, [user]);
+
+  const toggleCategory = (categoryId: SellerCategory) => {
     setSelectedCategories(prev =>
       prev.includes(categoryId)
         ? prev.filter(c => c !== categoryId)
@@ -37,17 +60,17 @@ const SellerOnboarding = () => {
 
     setIsSubmitting(true);
     try {
-      // Insert selected categories
-      const categoryInserts = selectedCategories.map(category => ({
-        user_id: user.id,
-        category,
-      }));
-
-      const { error: catError } = await supabase
+      const { error: deleteError } = await supabase
         .from('seller_categories')
-        .insert(categoryInserts);
+        .delete()
+        .eq('user_id', user.id);
 
-      if (catError) throw catError;
+      if (deleteError) throw deleteError;
+
+      const categoryInserts = selectedCategories.map((category) => ({ user_id: user.id, category }));
+      const { error: insertError } = await supabase.from('seller_categories').insert(categoryInserts);
+
+      if (insertError) throw insertError;
 
       // Update profile to seller
       const { error: profileError } = await supabase
@@ -84,19 +107,26 @@ const SellerOnboarding = () => {
             </p>
           </div>
 
+          {isLoadingCategories && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          )}
+
           {/* Marketplace Categories */}
-          <div className="mb-8">
+          <div className={`mb-8 ${isLoadingCategories ? 'hidden' : ''}`}>
             <div className="flex items-center gap-2 mb-4">
               <Store className="w-5 h-5 text-primary" />
               <h2 className="font-display text-xl font-semibold">MU Marketplace</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {marketplaceCategories.map((category) => {
-                const isSelected = selectedCategories.includes(category.id);
+                const id = category.id as SellerCategory;
+                const isSelected = selectedCategories.includes(id);
                 return (
                   <div
                     key={category.id}
-                    onClick={() => toggleCategory(category.id)}
+                    onClick={() => toggleCategory(id)}
                     className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
                       isSelected
                         ? 'border-primary bg-primary/10 glow-border-gold'
@@ -107,7 +137,7 @@ const SellerOnboarding = () => {
                       <Checkbox 
                         checked={isSelected} 
                         className="mt-1"
-                        onCheckedChange={() => toggleCategory(category.id)}
+                        onCheckedChange={() => toggleCategory(id)}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -124,18 +154,19 @@ const SellerOnboarding = () => {
           </div>
 
           {/* Services Categories */}
-          <div className="mb-8">
+          <div className={`mb-8 ${isLoadingCategories ? 'hidden' : ''}`}>
             <div className="flex items-center gap-2 mb-4">
               <Briefcase className="w-5 h-5 text-primary" />
               <h2 className="font-display text-xl font-semibold">MU Services</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {serviceCategories.map((category) => {
-                const isSelected = selectedCategories.includes(category.id);
+                const id = category.id as SellerCategory;
+                const isSelected = selectedCategories.includes(id);
                 return (
                   <div
                     key={category.id}
-                    onClick={() => toggleCategory(category.id)}
+                    onClick={() => toggleCategory(id)}
                     className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
                       isSelected
                         ? 'border-primary bg-primary/10 glow-border-gold'
@@ -146,7 +177,7 @@ const SellerOnboarding = () => {
                       <Checkbox 
                         checked={isSelected} 
                         className="mt-1"
-                        onCheckedChange={() => toggleCategory(category.id)}
+                        onCheckedChange={() => toggleCategory(id)}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
@@ -165,7 +196,7 @@ const SellerOnboarding = () => {
           <Button 
             onClick={handleSubmit}
             className="w-full btn-fantasy-primary"
-            disabled={isSubmitting || selectedCategories.length === 0}
+            disabled={isLoadingCategories || isSubmitting || selectedCategories.length === 0}
           >
             {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             Continue to Seller Dashboard ({selectedCategories.length} selected)

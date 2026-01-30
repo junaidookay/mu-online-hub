@@ -72,7 +72,7 @@ const Services = () => {
             streaming promotion, custom videos, and stunning banners.
           </p>
           <Button asChild className="btn-fantasy-primary bg-gradient-to-b from-secondary/90 to-secondary text-secondary-foreground">
-            <Link to="/pricing">List Your Service</Link>
+            <Link to="/seller-onboarding">List Your Service</Link>
           </Button>
         </div>
 
@@ -147,7 +147,7 @@ const Services = () => {
           <div className="glass-card p-8 text-center">
             <p className="text-muted-foreground mb-4">No services found matching your search.</p>
             <Button asChild className="btn-fantasy-primary bg-gradient-to-b from-secondary/90 to-secondary">
-              <Link to="/pricing">Be the first to list!</Link>
+              <Link to="/seller-onboarding">Be the first to list!</Link>
             </Button>
           </div>
         )}
