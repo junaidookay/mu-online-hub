@@ -9,6 +9,7 @@ import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
 import { getSlotRedirectUrl } from '@/lib/slotConfig';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -77,15 +78,24 @@ const MarketplaceAds = () => {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredAds.map((ad) => (
-              <a
-                key={ad.id}
-                href={`https://${ad.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackAdClick(ad.id, ad.website)}
-                className="ad-banner block relative group"
-              >
+            {filteredAds.map((ad) => {
+              const href = normalizeExternalUrl(ad.website);
+              const CardComponent = href ? 'a' : 'div';
+              const cardProps = href
+                ? ({
+                    href,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    onClick: () => trackAdClick(ad.id, href),
+                  } as const)
+                : undefined;
+
+              return (
+                <CardComponent
+                  key={ad.id}
+                  {...cardProps}
+                  className="ad-banner block relative group"
+                >
                 <div className="p-4 bg-muted/30 rounded-lg border border-border/30 hover:border-primary/50 transition-colors">
                   {ad.vip_level && ad.vip_level !== 'none' && (
                     <span className={`vip-badge ${ad.vip_level === 'gold' ? 'vip-gold' : 'vip-diamond'} mb-2 inline-block`}>
@@ -107,8 +117,9 @@ const MarketplaceAds = () => {
                     <ExternalLink size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                 </div>
-              </a>
-            ))}
+                </CardComponent>
+              );
+            })}
           </div>
 
           {filteredAds.length === 0 && (

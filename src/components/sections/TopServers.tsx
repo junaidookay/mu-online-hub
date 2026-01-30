@@ -5,6 +5,7 @@ import { ExternalLink, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type ServerType = Tables<'servers'>;
 
@@ -46,15 +47,24 @@ const TopServers = () => {
         badge={<span className="text-xs text-secondary">{allServers.length} active</span>}
       />
       <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
-        {displayServers.map((server, index) => (
-          <div key={server.id}>
-            <a
-              href={`https://${server.website}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => 'id' in server && trackServerClick(server.id, server.website)}
-              className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
-            >
+        {displayServers.map((server, index) => {
+          const href = normalizeExternalUrl(server.website);
+          const CardComponent = href ? 'a' : 'div';
+          const cardProps = href
+            ? ({
+                href,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                onClick: () => 'id' in server && trackServerClick(server.id, href),
+              } as const)
+            : undefined;
+
+          return (
+            <div key={server.id}>
+              <CardComponent
+                {...cardProps}
+                className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
+              >
               <div className="relative">
                 {server.banner_url ? (
                   <img 
@@ -83,7 +93,7 @@ const TopServers = () => {
                   </p>
                 </div>
               </div>
-            </a>
+              </CardComponent>
             {/* Upgrade CTA after each server */}
             {index < displayServers.length - 1 && (
               <button className="w-full py-1 mt-1 flex items-center justify-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors">
@@ -91,8 +101,9 @@ const TopServers = () => {
                 <span>Upgrade to Premium</span>
               </button>
             )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>

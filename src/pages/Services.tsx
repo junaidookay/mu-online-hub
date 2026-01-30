@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useClickTracking } from '@/hooks/useClickTracking';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 interface Advertisement {
   id: string;
@@ -105,42 +106,52 @@ const Services = () => {
 
         {/* Services Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredServices.map((service) => (
-            <a
-              key={service.id}
-              href={service.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => trackAdClick(service.id, service.website)}
-              className="glass-card overflow-hidden group hover:glow-border-cyan transition-all"
-            >
-              {service.banner_url && (
-                <div className="aspect-video relative overflow-hidden">
-                  <img 
-                    src={service.banner_url} 
-                    alt={service.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                  {service.vip_level && service.vip_level !== 'none' && (
-                    <Badge className={`absolute top-2 right-2 ${service.vip_level === 'diamond' ? 'vip-diamond' : 'vip-gold'}`}>
-                      {service.vip_level.toUpperCase()}
-                    </Badge>
+          {filteredServices.map((service) => {
+            const href = normalizeExternalUrl(service.website);
+            const CardComponent = href ? 'a' : 'div';
+            const cardProps = href
+              ? ({
+                  href,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  onClick: () => trackAdClick(service.id, href),
+                } as const)
+              : undefined;
+
+            return (
+              <CardComponent
+                key={service.id}
+                {...cardProps}
+                className="glass-card overflow-hidden group hover:glow-border-cyan transition-all"
+              >
+                {service.banner_url && (
+                  <div className="aspect-video relative overflow-hidden">
+                    <img 
+                      src={service.banner_url} 
+                      alt={service.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    {service.vip_level && service.vip_level !== 'none' && (
+                      <Badge className={`absolute top-2 right-2 ${service.vip_level === 'diamond' ? 'vip-diamond' : 'vip-gold'}`}>
+                        {service.vip_level.toUpperCase()}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-display font-semibold text-foreground group-hover:text-secondary transition-colors">
+                      {service.title}
+                    </h3>
+                    <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  {service.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
                   )}
                 </div>
-              )}
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-display font-semibold text-foreground group-hover:text-secondary transition-colors">
-                    {service.title}
-                  </h3>
-                  <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                {service.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
-                )}
-              </div>
-            </a>
-          ))}
+              </CardComponent>
+            );
+          })}
         </div>
 
         {filteredServices.length === 0 && (

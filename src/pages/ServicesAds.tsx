@@ -9,6 +9,7 @@ import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
 import { getSlotRedirectUrl } from '@/lib/slotConfig';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -77,15 +78,24 @@ const ServicesAds = () => {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredServices.map((service) => (
-              <a
-                key={service.id}
-                href={`https://${service.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackAdClick(service.id, service.website)}
-                className="ad-banner block relative group"
-              >
+            {filteredServices.map((service) => {
+              const href = normalizeExternalUrl(service.website);
+              const CardComponent = href ? 'a' : 'div';
+              const cardProps = href
+                ? ({
+                    href,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    onClick: () => trackAdClick(service.id, href),
+                  } as const)
+                : undefined;
+
+              return (
+                <CardComponent
+                  key={service.id}
+                  {...cardProps}
+                  className="ad-banner block relative group"
+                >
                 <div className="p-4 bg-muted/30 rounded-lg border border-border/30 hover:border-secondary/50 transition-colors">
                   {service.vip_level && service.vip_level !== 'none' && (
                     <span className={`vip-badge ${service.vip_level === 'gold' ? 'vip-gold' : 'vip-diamond'} mb-2 inline-block`}>
@@ -107,8 +117,9 @@ const ServicesAds = () => {
                     <ExternalLink size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                 </div>
-              </a>
-            ))}
+                </CardComponent>
+              );
+            })}
           </div>
 
           {filteredServices.length === 0 && (

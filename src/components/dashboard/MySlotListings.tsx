@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { SLOT_CONFIG, getSlotConfig } from '@/lib/slotConfig';
+import { normalizeExternalUrl } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertDialog,
@@ -343,15 +344,21 @@ export const MySlotListings = () => {
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       {listing.website && (
-                        <a
-                          href={listing.website.startsWith('http') ? listing.website : `https://${listing.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 hover:text-primary"
-                        >
-                          {listing.website}
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                        (() => {
+                          const href = normalizeExternalUrl(listing.website);
+                          if (!href) return null;
+                          return (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 hover:text-primary"
+                            >
+                              {listing.website}
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          );
+                        })()
                       )}
                       <span>Created: {format(new Date(listing.created_at), 'MMM d, yyyy')}</span>
                     </div>
@@ -430,15 +437,21 @@ export const MySlotListings = () => {
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       {listing.website && (
-                        <a
-                          href={listing.website.startsWith('http') ? listing.website : `https://${listing.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 hover:text-primary"
-                        >
-                          {listing.website}
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
+                        (() => {
+                          const href = normalizeExternalUrl(listing.website);
+                          if (!href) return null;
+                          return (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 hover:text-primary"
+                            >
+                              {listing.website}
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          );
+                        })()
                       )}
                       {listing.expires_at && (
                         <span className="flex items-center gap-1">

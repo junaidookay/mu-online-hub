@@ -5,6 +5,7 @@ import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -46,15 +47,24 @@ const MarketplaceAdvertise = () => {
         subtitle="Websites, Server Files, Antihack etc."
       />
       <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
-        {displayAds.map((ad) => (
-          <a
-            key={ad.id}
-            href={`https://${ad.website}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => trackAdClick(ad.id, ad.website)}
-            className="ad-banner block relative group"
-          >
+        {displayAds.map((ad) => {
+          const href = normalizeExternalUrl(ad.website);
+          const CardComponent = href ? 'a' : 'div';
+          const cardProps = href
+            ? ({
+                href,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                onClick: () => trackAdClick(ad.id, href),
+              } as const)
+            : undefined;
+
+          return (
+            <CardComponent
+              key={ad.id}
+              {...cardProps}
+              className="ad-banner block relative group"
+            >
             <div className="flex items-center gap-2 p-1.5 bg-muted/30 rounded border border-border/30">
               {ad.vip_level && ad.vip_level !== 'none' && (
                 <span className={`vip-badge ${ad.vip_level === 'gold' ? 'vip-gold' : 'vip-diamond'} shrink-0`}>
@@ -74,8 +84,9 @@ const MarketplaceAdvertise = () => {
               </div>
               <ExternalLink size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </div>
-          </a>
-        ))}
+            </CardComponent>
+          );
+        })}
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>

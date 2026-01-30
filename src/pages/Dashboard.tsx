@@ -23,6 +23,7 @@ import { ImageUpload } from '@/components/upload/ImageUpload';
 import { SEOHead } from '@/components/SEOHead';
 import { MySlotListings } from '@/components/dashboard/MySlotListings';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type ServerType = Tables<'servers'>;
 type AdvertisementType = Tables<'advertisements'>;
@@ -373,14 +374,20 @@ const Dashboard = () => {
                           <p className="text-xs text-muted-foreground">
                             {server.season} {server.part} - {server.exp_rate}
                           </p>
-                          <a 
-                            href={`https://${server.website}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-xs text-secondary flex items-center gap-1 hover:underline"
-                          >
-                            {server.website} <ExternalLink size={10} />
-                          </a>
+                          {(() => {
+                            const href = normalizeExternalUrl(server.website);
+                            if (!href) return null;
+                            return (
+                              <a 
+                                href={href} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-secondary flex items-center gap-1 hover:underline"
+                              >
+                                {server.website} <ExternalLink size={10} />
+                              </a>
+                            );
+                          })()}
                         </div>
                       </div>
                       <div className="flex items-center gap-4">

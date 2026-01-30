@@ -4,6 +4,7 @@ import SectionHeader from './SectionHeader';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type ArcanaProject = Tables<'arcana_projects'>;
 
@@ -40,31 +41,41 @@ const ArcanaProjects = () => {
         badge={<span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded live-indicator ml-2">LIVE</span>}
       />
       <div className="flex-1 p-2 space-y-3 overflow-y-auto scrollbar-thin">
-        {displayProjects.map((project) => (
-          <a
-            key={project.id}
-            href={`https://${project.website}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block group"
-          >
-            <div className="relative rounded-lg overflow-hidden border border-border/30 hover:border-primary/50 transition-all hover:glow-border-gold">
-              {project.image_url && (
-                <img 
-                  src={project.image_url} 
-                  alt={project.name}
-                  className="w-full h-24 object-cover"
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-2">
-                <h4 className="font-display text-sm font-bold text-primary text-glow-gold">{project.name}</h4>
-                <p className="text-[10px] text-muted-foreground">{project.info}</p>
+        {displayProjects.map((project) => {
+          const href = normalizeExternalUrl(project.website);
+          const CardComponent = href ? 'a' : 'div';
+          const cardProps = href
+            ? ({
+                href,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              } as const)
+            : undefined;
+
+          return (
+            <CardComponent
+              key={project.id}
+              {...cardProps}
+              className="block group"
+            >
+              <div className="relative rounded-lg overflow-hidden border border-border/30 hover:border-primary/50 transition-all hover:glow-border-gold">
+                {project.image_url && (
+                  <img 
+                    src={project.image_url} 
+                    alt={project.name}
+                    className="w-full h-24 object-cover"
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-2">
+                  <h4 className="font-display text-sm font-bold text-primary text-glow-gold">{project.name}</h4>
+                  <p className="text-[10px] text-muted-foreground">{project.info}</p>
+                </div>
+                <ExternalLink size={12} className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100" />
               </div>
-              <ExternalLink size={12} className="absolute top-2 right-2 text-muted-foreground opacity-0 group-hover:opacity-100" />
-            </div>
-          </a>
-        ))}
+            </CardComponent>
+          );
+        })}
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>

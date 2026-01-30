@@ -5,6 +5,7 @@ import { SEOHead } from '@/components/SEOHead';
 import { ExternalLink, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type Partner = Tables<'partners'>;
 
@@ -65,14 +66,23 @@ const Partners = () => {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredPartners.map((partner) => (
-              <a
-                key={partner.id}
-                href={`https://${partner.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block group"
-              >
+            {filteredPartners.map((partner) => {
+              const href = normalizeExternalUrl(partner.website);
+              const CardComponent = href ? 'a' : 'div';
+              const cardProps = href
+                ? ({
+                    href,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                  } as const)
+                : undefined;
+
+              return (
+                <CardComponent
+                  key={partner.id}
+                  {...cardProps}
+                  className="block group"
+                >
                 <div className="p-4 bg-muted/30 rounded-lg border border-border/30 hover:border-secondary/50 transition-colors">
                   <div className="flex gap-4">
                     {partner.image_url && (
@@ -92,8 +102,9 @@ const Partners = () => {
                     <ExternalLink size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
                   </div>
                 </div>
-              </a>
-            ))}
+                </CardComponent>
+              );
+            })}
           </div>
 
           {filteredPartners.length === 0 && (

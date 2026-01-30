@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Package, ShoppingCart, Star } from 'lucide-react';
 import { categoryIcons, categoryLabels, marketplaceCategories, serviceCategories } from '@/lib/categories';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 interface Listing {
   id: string;
@@ -25,37 +26,6 @@ interface MarketplaceListingsProps {
 // Get category IDs for each type
 const marketplaceCategoryIds = marketplaceCategories.map(c => c.id);
 const serviceCategoryIds = serviceCategories.map(c => c.id);
-
-const getListingHref = (website: string | null) => {
-  const value = website?.trim();
-  if (!value) return null;
-
-  const normalized = value
-    .replace(/^https?\/\//i, (match) => (match.toLowerCase().startsWith('https') ? 'https://' : 'http://'))
-    .replace(/^(https?):\/(?!\/)/i, '$1://')
-    .replace(/^\/\//, 'https://')
-    .replace(/^(https?:\/\/)https?:?\/\/+/i, '$1');
-
-  if (/^(mailto:|tel:)/i.test(normalized)) return normalized;
-
-  if (/^https?:\/\//i.test(normalized)) {
-    try {
-      return new URL(normalized).toString();
-    } catch {
-      return null;
-    }
-  }
-
-  if (/^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(normalized)) {
-    try {
-      return new URL(`https://${normalized}`).toString();
-    } catch {
-      return null;
-    }
-  }
-
-  return null;
-};
 
 export const MarketplaceListings = ({ 
   searchQuery = '', 
@@ -135,7 +105,7 @@ export const MarketplaceListings = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredListings.map((listing) => {
           const Icon = categoryIcons[listing.category] || Package;
-          const href = getListingHref(listing.website);
+          const href = normalizeExternalUrl(listing.website);
           
           const CardComponent = href ? 'a' : 'div';
           const cardProps = href

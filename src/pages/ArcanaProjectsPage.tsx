@@ -5,6 +5,7 @@ import { SEOHead } from '@/components/SEOHead';
 import { ExternalLink, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type ArcanaProject = Tables<'arcana_projects'>;
 
@@ -65,14 +66,23 @@ const ArcanaProjectsPage = () => {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredProjects.map((project) => (
-              <a
-                key={project.id}
-                href={`https://${project.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block group"
-              >
+            {filteredProjects.map((project) => {
+              const href = normalizeExternalUrl(project.website);
+              const CardComponent = href ? 'a' : 'div';
+              const cardProps = href
+                ? ({
+                    href,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                  } as const)
+                : undefined;
+
+              return (
+                <CardComponent
+                  key={project.id}
+                  {...cardProps}
+                  className="block group"
+                >
                 <div className="relative rounded-lg overflow-hidden border border-border/30 hover:border-primary/50 transition-all hover:glow-border-gold">
                   {project.image_url && (
                     <img 
@@ -91,8 +101,9 @@ const ArcanaProjectsPage = () => {
                   </div>
                   <ExternalLink size={16} className="absolute top-3 right-3 text-muted-foreground opacity-0 group-hover:opacity-100" />
                 </div>
-              </a>
-            ))}
+                </CardComponent>
+              );
+            })}
           </div>
 
           {filteredProjects.length === 0 && (

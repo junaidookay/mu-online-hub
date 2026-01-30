@@ -5,6 +5,7 @@ import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -45,15 +46,24 @@ const ServicesAdvertise = () => {
         subtitle="Configurations, Streamer, Custom, Video, Banner"
       />
       <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
-        {displayServices.map((service) => (
-          <a
-            key={service.id}
-            href={`https://${service.website}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => trackAdClick(service.id, service.website)}
-            className="ad-banner block relative group"
-          >
+        {displayServices.map((service) => {
+          const href = normalizeExternalUrl(service.website);
+          const CardComponent = href ? 'a' : 'div';
+          const cardProps = href
+            ? ({
+                href,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                onClick: () => trackAdClick(service.id, href),
+              } as const)
+            : undefined;
+
+          return (
+            <CardComponent
+              key={service.id}
+              {...cardProps}
+              className="ad-banner block relative group"
+            >
             <div className="flex items-center gap-2 p-1.5 bg-muted/30 rounded border border-border/30">
               {service.vip_level && service.vip_level !== 'none' && (
                 <span className={`vip-badge ${service.vip_level === 'gold' ? 'vip-gold' : 'vip-diamond'} shrink-0`}>
@@ -73,8 +83,9 @@ const ServicesAdvertise = () => {
               </div>
               <ExternalLink size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </div>
-          </a>
-        ))}
+            </CardComponent>
+          );
+        })}
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>

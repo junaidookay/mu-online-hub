@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from '@/components/sections/SectionHeader';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 interface TextServer {
   id: string;
@@ -54,18 +55,27 @@ const PremiumTextServers = () => {
     >
       <SectionHeader title="Premium Text Servers" />
       <div className="p-2 space-y-1">
-        {displayServers.map((server, index) => (
-          <a
-            key={server.id}
-            href={`https://${server.website}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`flex items-center justify-between p-2 rounded border transition-all ${
-              index === currentIndex 
-                ? 'border-primary/50 bg-primary/10 pulse-glow' 
-                : 'border-border/30 bg-muted/20 hover:border-border/50'
-            }`}
-          >
+        {displayServers.map((server, index) => {
+          const href = normalizeExternalUrl(server.website);
+          const CardComponent = href ? 'a' : 'div';
+          const cardProps = href
+            ? ({
+                href,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              } as const)
+            : undefined;
+
+          return (
+            <CardComponent
+              key={server.id}
+              {...cardProps}
+              className={`flex items-center justify-between p-2 rounded border transition-all ${
+                index === currentIndex 
+                  ? 'border-primary/50 bg-primary/10 pulse-glow' 
+                  : 'border-border/30 bg-muted/20 hover:border-border/50'
+              }`}
+            >
             <div className="flex items-center gap-2">
               <span className="vip-badge vip-gold">VIP</span>
               <span className="text-xs font-semibold text-foreground">{server.name}</span>
@@ -75,8 +85,9 @@ const PremiumTextServers = () => {
               <span>{server.version}</span>
               <span>{server.open_date || ''}</span>
             </div>
-          </a>
-        ))}
+            </CardComponent>
+          );
+        })}
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
 import { useNavigate } from 'react-router-dom';
 import { getSlotRedirectUrl } from '@/lib/slotConfig';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type ServerType = Tables<'servers'>;
 
@@ -77,15 +78,24 @@ const Servers = () => {
           </div>
 
           <div className="space-y-3">
-            {filteredServers.map((server) => (
-              <a
-                key={server.id}
-                href={`https://${server.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => 'id' in server && trackServerClick(server.id, server.website)}
-                className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
-              >
+            {filteredServers.map((server) => {
+              const href = normalizeExternalUrl(server.website);
+              const CardComponent = href ? 'a' : 'div';
+              const cardProps = href
+                ? ({
+                    href,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                    onClick: () => 'id' in server && trackServerClick(server.id, href),
+                  } as const)
+                : undefined;
+
+              return (
+                <CardComponent
+                  key={server.id}
+                  {...cardProps}
+                  className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
+                >
                 <div className="relative">
                   {server.banner_url ? (
                     <img 
@@ -114,8 +124,9 @@ const Servers = () => {
                     </p>
                   </div>
                 </div>
-              </a>
-            ))}
+                </CardComponent>
+              );
+            })}
           </div>
 
           {filteredServers.length === 0 && (

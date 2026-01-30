@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 interface Project {
   id: string;
@@ -90,37 +91,47 @@ const ArcanaProjectsPage = () => {
             Active Partner Servers
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <a
-                key={project.id}
-                href={project.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="glass-card overflow-hidden group hover:glow-border-gold transition-all"
-              >
-                {project.image_url && (
-                  <div className="aspect-video relative overflow-hidden">
-                    <img 
-                      src={project.image_url} 
-                      alt={project.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <Badge className="absolute top-2 right-2 vip-gold">ARCANA</Badge>
-                  </div>
-                )}
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-display font-bold text-lg text-foreground group-hover:text-primary transition-colors">
-                      {project.name}
-                    </h3>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  {project.info && (
-                    <p className="text-sm text-muted-foreground">{project.info}</p>
+            {projects.map((project) => {
+              const href = normalizeExternalUrl(project.website);
+              const CardComponent = href ? 'a' : 'div';
+              const cardProps = href
+                ? ({
+                    href,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                  } as const)
+                : undefined;
+
+              return (
+                <CardComponent
+                  key={project.id}
+                  {...cardProps}
+                  className="glass-card overflow-hidden group hover:glow-border-gold transition-all"
+                >
+                  {project.image_url && (
+                    <div className="aspect-video relative overflow-hidden">
+                      <img 
+                        src={project.image_url} 
+                        alt={project.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <Badge className="absolute top-2 right-2 vip-gold">ARCANA</Badge>
+                    </div>
                   )}
-                </div>
-              </a>
-            ))}
+                  <div className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-display font-bold text-lg text-foreground group-hover:text-primary transition-colors">
+                        {project.name}
+                      </h3>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    {project.info && (
+                      <p className="text-sm text-muted-foreground">{project.info}</p>
+                    )}
+                  </div>
+                </CardComponent>
+              );
+            })}
           </div>
 
           {projects.length === 0 && (

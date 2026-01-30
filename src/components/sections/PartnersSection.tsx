@@ -4,6 +4,7 @@ import SectionHeader from './SectionHeader';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type Partner = Tables<'partners'>;
 
@@ -40,30 +41,40 @@ const PartnersSection = () => {
         badge={<span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded live-indicator ml-2">LIVE</span>}
       />
       <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
-        {displayPartners.map((partner) => (
-          <a
-            key={partner.id}
-            href={`https://${partner.website}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block group"
-          >
-            <div className="flex gap-2 p-1.5 bg-muted/30 rounded border border-border/30 hover:border-secondary/50 transition-colors">
-              {partner.image_url && (
-                <img 
-                  src={partner.image_url} 
-                  alt={partner.name}
-                  className="w-20 h-12 object-cover rounded shrink-0"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-muted-foreground truncate">{partner.name}</p>
-                <p className="text-xs font-semibold text-secondary truncate">{partner.info}</p>
+        {displayPartners.map((partner) => {
+          const href = normalizeExternalUrl(partner.website);
+          const CardComponent = href ? 'a' : 'div';
+          const cardProps = href
+            ? ({
+                href,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              } as const)
+            : undefined;
+
+          return (
+            <CardComponent
+              key={partner.id}
+              {...cardProps}
+              className="block group"
+            >
+              <div className="flex gap-2 p-1.5 bg-muted/30 rounded border border-border/30 hover:border-secondary/50 transition-colors">
+                {partner.image_url && (
+                  <img 
+                    src={partner.image_url} 
+                    alt={partner.name}
+                    className="w-20 h-12 object-cover rounded shrink-0"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted-foreground truncate">{partner.name}</p>
+                  <p className="text-xs font-semibold text-secondary truncate">{partner.info}</p>
+                </div>
+                <ExternalLink size={10} className="text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
               </div>
-              <ExternalLink size={10} className="text-muted-foreground opacity-0 group-hover:opacity-100 shrink-0" />
-            </div>
-          </a>
-        ))}
+            </CardComponent>
+          );
+        })}
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>

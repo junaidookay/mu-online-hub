@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Tables } from '@/integrations/supabase/types';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 type PremiumBanner = Tables<'premium_banners'>;
 
@@ -54,6 +55,15 @@ const PremiumBanner = () => {
 
   const banner = banners[currentBanner];
   if (!banner) return null;
+  const href = normalizeExternalUrl(banner.website);
+  const BannerWrapper = href ? 'a' : 'div';
+  const bannerWrapperProps = href
+    ? ({
+        href,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      } as const)
+    : undefined;
 
   return (
     <div 
@@ -61,10 +71,8 @@ const PremiumBanner = () => {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      <a 
-        href={`https://${banner.website}`}
-        target="_blank"
-        rel="noopener noreferrer"
+      <BannerWrapper 
+        {...bannerWrapperProps}
         className="block"
       >
         <div className="relative aspect-[4/1] min-h-[120px] overflow-hidden rounded-lg border-2 border-primary/30">
@@ -85,7 +93,7 @@ const PremiumBanner = () => {
             <span className="vip-badge vip-gold">Premium</span>
           </div>
         </div>
-      </a>
+      </BannerWrapper>
 
       {/* Navigation arrows */}
       <button

@@ -23,6 +23,7 @@ import { UserBadges } from '@/components/user/UserBadges';
 import ContactSellerButton from '@/components/messaging/ContactSellerButton';
 import { useListingViews } from '@/hooks/useListingViews';
 import { CheckoutModal } from '@/components/checkout/CheckoutModal';
+import { normalizeExternalUrl } from '@/lib/utils';
 
 interface Listing {
   id: string;
@@ -169,6 +170,7 @@ const ListingDetail = () => {
   }
 
   const Icon = categoryIcons[listing.category] || Package;
+  const websiteHref = normalizeExternalUrl(listing.website);
 
   return (
     <div className="min-h-screen bg-background">
@@ -271,13 +273,13 @@ const ListingDetail = () => {
                   </Button>
                 ) : null}
 
-                {listing.website && (
+                {websiteHref && (
                   <Button 
                     variant="outline" 
                     className="w-full btn-fantasy-outline gap-2"
                     asChild
                   >
-                    <a href={listing.website} target="_blank" rel="noopener noreferrer">
+                    <a href={websiteHref} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="w-4 h-4" />
                       Visit Website
                     </a>
