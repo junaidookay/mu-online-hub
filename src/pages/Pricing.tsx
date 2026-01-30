@@ -78,7 +78,7 @@ const Pricing = () => {
       title: 'Draft Created!',
       description: 'Your draft has been saved. Go to your dashboard to complete and publish it.',
     });
-    navigate('/seller-dashboard');
+    navigate('/dashboard');
   };
 
   const handleFreeSlotAccess = () => {
