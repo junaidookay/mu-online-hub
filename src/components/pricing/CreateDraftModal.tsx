@@ -20,6 +20,7 @@ interface CreateDraftModalProps {
   isOpen: boolean;
   onClose: () => void;
   slotId: number;
+  initialPackageId?: string;
   onSuccess: () => void;
 }
 
@@ -38,7 +39,7 @@ interface PricingPackage {
   description: string | null;
 }
 
-export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateDraftModalProps) => {
+export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, onSuccess }: CreateDraftModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const slotConfig = getSlotConfig(slotId);
@@ -93,9 +94,9 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
         if (error) throw error;
         setPackages(data || []);
         
-        // Auto-select the first package
         if (data && data.length > 0) {
-          setSelectedPackageId(data[0].id);
+          const initial = initialPackageId && data.some((p) => p.id === initialPackageId) ? initialPackageId : data[0].id;
+          setSelectedPackageId(initial);
         }
       } catch (error) {
         console.error('Error fetching packages:', error);
@@ -105,7 +106,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, onSuccess }: CreateD
     };
     
     fetchPackages();
-  }, [isOpen, slotId]);
+  }, [isOpen, slotId, initialPackageId]);
 
   // Fetch user's listings for Slot 7
   useEffect(() => {

@@ -9,7 +9,6 @@ import { Loader2, ShoppingBag, Wrench, Trophy, Type, Image, Calendar, Percent, S
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SEOHead } from '@/components/SEOHead';
 import { SLOT_CONFIG, getSlotRedirectUrl, isSlotFree, FREE_SLOT_ID } from '@/lib/slotConfig';
-import { SlotCheckoutModal } from '@/components/checkout/SlotCheckoutModal';
 import { Badge } from '@/components/ui/badge';
 import { CreateDraftModal } from '@/components/pricing/CreateDraftModal';
 
@@ -32,10 +31,9 @@ const Pricing = () => {
 
   const [packages, setPackages] = useState<PricingPackage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPackage, setSelectedPackage] = useState<PricingPackage | null>(null);
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [draftModalOpen, setDraftModalOpen] = useState(false);
   const [draftSlotId, setDraftSlotId] = useState<number | null>(null);
+  const [draftPackageId, setDraftPackageId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPackages();
@@ -57,32 +55,7 @@ const Pricing = () => {
     setLoading(false);
   };
 
-  const handlePurchase = async (pkg: PricingPackage) => {
-    if (!user) {
-      toast({
-        title: 'Login Required',
-        description: 'Please sign in to make a purchase.',
-        variant: 'destructive',
-      });
-      navigate('/auth');
-      return;
-    }
-
-    if (!pkg.slot_id) {
-      toast({
-        title: 'Invalid Package',
-        description: 'This package is not linked to a homepage slot.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Open checkout modal
-    setSelectedPackage(pkg);
-    setCheckoutOpen(true);
-  };
-
-  const handleCreateDraft = (slotId: number) => {
+  const handleCreateDraft = (slotId: number, packageId?: string) => {
     if (!user) {
       toast({
         title: 'Login Required',
@@ -94,6 +67,7 @@ const Pricing = () => {
     }
 
     setDraftSlotId(slotId);
+    setDraftPackageId(packageId ?? null);
     setDraftModalOpen(true);
   };
 
@@ -104,7 +78,7 @@ const Pricing = () => {
       title: 'Draft Created!',
       description: 'Your draft has been saved. Go to your dashboard to complete and publish it.',
     });
-    navigate('/dashboard');
+    navigate('/seller-dashboard');
   };
 
   const handleFreeSlotAccess = () => {
@@ -293,10 +267,10 @@ const Pricing = () => {
                     )}
 
                     <Button
-                      onClick={() => handlePurchase(pkg)}
+                      onClick={() => handleCreateDraft(slotId, pkg.id)}
                       className="w-full btn-fantasy-primary"
                     >
-                      Purchase & Publish Now
+                      Create Draft & Pay Later
                     </Button>
                   </div>
                 ))}
@@ -315,22 +289,6 @@ const Pricing = () => {
         </div>
       </div>
 
-      {/* Checkout Modal */}
-      {selectedPackage && (
-        <SlotCheckoutModal
-          isOpen={checkoutOpen}
-          onClose={() => {
-            setCheckoutOpen(false);
-            setSelectedPackage(null);
-          }}
-          packageId={selectedPackage.id}
-          packageName={selectedPackage.name}
-          slotId={selectedPackage.slot_id!}
-          priceInCents={selectedPackage.price_cents}
-          durationDays={selectedPackage.duration_days}
-        />
-      )}
-
       {/* Create Draft Modal */}
       {draftSlotId && (
         <CreateDraftModal
@@ -338,8 +296,10 @@ const Pricing = () => {
           onClose={() => {
             setDraftModalOpen(false);
             setDraftSlotId(null);
+            setDraftPackageId(null);
           }}
           slotId={draftSlotId}
+          initialPackageId={draftPackageId ?? undefined}
           onSuccess={handleDraftCreated}
         />
       )}
