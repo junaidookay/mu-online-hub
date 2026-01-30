@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Package, ShoppingCart, Star } from 'lucide-react';
@@ -26,6 +25,18 @@ interface MarketplaceListingsProps {
 // Get category IDs for each type
 const marketplaceCategoryIds = marketplaceCategories.map(c => c.id);
 const serviceCategoryIds = serviceCategories.map(c => c.id);
+
+const getListingHref = (website: string | null) => {
+  const value = website?.trim();
+  if (!value) return null;
+
+  if (/^(https?:)?\/\//i.test(value)) return value.startsWith('//') ? `https:${value}` : value;
+  if (/^(mailto:|tel:)/i.test(value)) return value;
+
+  if (/^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(value)) return `https://${value}`;
+
+  return null;
+};
 
 export const MarketplaceListings = ({ 
   searchQuery = '', 
@@ -105,12 +116,24 @@ export const MarketplaceListings = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredListings.map((listing) => {
           const Icon = categoryIcons[listing.category] || Package;
+          const href = getListingHref(listing.website);
           
+          const CardComponent = href ? 'a' : 'div';
+          const cardProps = href
+            ? ({
+                href,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              } as const)
+            : undefined;
+
           return (
-            <Link
+            <CardComponent
               key={listing.id}
-              to={`/marketplace/${listing.id}`}
-              className="glass-card overflow-hidden group hover:glow-border-gold transition-all"
+              {...cardProps}
+              className={`glass-card overflow-hidden group transition-all ${
+                href ? 'hover:glow-border-gold cursor-pointer' : 'cursor-default'
+              }`}
             >
               {listing.image_url ? (
                 <div className="aspect-video relative overflow-hidden">
@@ -150,7 +173,7 @@ export const MarketplaceListings = ({
                   <p className="text-sm text-muted-foreground">Contact for price</p>
                 )}
               </div>
-            </Link>
+            </CardComponent>
           );
         })}
       </div>

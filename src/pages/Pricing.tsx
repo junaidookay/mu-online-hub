@@ -219,7 +219,7 @@ const Pricing = () => {
                 <div className="mb-6 text-center">
                   <Button
                     variant="outline"
-                    onClick={() => handleCreateDraft(slotId)}
+                    disabled
                     className="gap-2"
                   >
                     <FileText className="w-4 h-4" />
