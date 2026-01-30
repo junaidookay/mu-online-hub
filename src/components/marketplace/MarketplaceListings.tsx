@@ -30,10 +30,29 @@ const getListingHref = (website: string | null) => {
   const value = website?.trim();
   if (!value) return null;
 
-  if (/^(https?:)?\/\//i.test(value)) return value.startsWith('//') ? `https:${value}` : value;
-  if (/^(mailto:|tel:)/i.test(value)) return value;
+  const normalized = value
+    .replace(/^https?\/\//i, (match) => (match.toLowerCase().startsWith('https') ? 'https://' : 'http://'))
+    .replace(/^(https?):\/(?!\/)/i, '$1://')
+    .replace(/^\/\//, 'https://')
+    .replace(/^(https?:\/\/)https?:?\/\/+/i, '$1');
 
-  if (/^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(value)) return `https://${value}`;
+  if (/^(mailto:|tel:)/i.test(normalized)) return normalized;
+
+  if (/^https?:\/\//i.test(normalized)) {
+    try {
+      return new URL(normalized).toString();
+    } catch {
+      return null;
+    }
+  }
+
+  if (/^[\w-]+(\.[\w-]+)+([/?#].*)?$/i.test(normalized)) {
+    try {
+      return new URL(`https://${normalized}`).toString();
+    } catch {
+      return null;
+    }
+  }
 
   return null;
 };

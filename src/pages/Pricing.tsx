@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ShoppingBag, Wrench, Trophy, Type, Image, Calendar, Percent, Sparkles, FileText } from 'lucide-react';
+import { Loader2, ShoppingBag, Wrench, Trophy, Type, Image, Calendar, Percent, Sparkles } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SEOHead } from '@/components/SEOHead';
 import { SLOT_CONFIG, getSlotRedirectUrl, isSlotFree, FREE_SLOT_ID } from '@/lib/slotConfig';
@@ -214,23 +214,6 @@ const Pricing = () => {
                 </p>
               </div>
 
-              {/* Create Draft Button for logged-in users */}
-              {user && (
-                <div className="mb-6 text-center">
-                  <Button
-                    variant="outline"
-                    disabled
-                    className="gap-2"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Create Draft First (Pay Later)
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Create your listing as a draft, then pay when you're ready to go live.
-                  </p>
-                </div>
-              )}
-              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {groupedPackages[slotId]?.map((pkg) => (
                   <div
