@@ -4,22 +4,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, 
   Trash2, 
   Loader2, 
   Server,
   Megaphone,
   ExternalLink,
-  Crown,
   LayoutGrid
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { ImageUpload } from '@/components/upload/ImageUpload';
 import { SEOHead } from '@/components/SEOHead';
 import { MySlotListings } from '@/components/dashboard/MySlotListings';
 import type { Tables } from '@/integrations/supabase/types';
@@ -36,15 +31,6 @@ const Dashboard = () => {
   const [servers, setServers] = useState<ServerType[]>([]);
   const [ads, setAds] = useState<AdvertisementType[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Form states
-  const [newServer, setNewServer] = useState({
-    name: '', season: '', part: '', exp_rate: '', website: '', banner_url: ''
-  });
-  const [newAd, setNewAd] = useState({
-    ad_type: 'marketplace' as 'marketplace' | 'services',
-    title: '', description: '', website: '', banner_url: ''
-  });
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [isActivating, setIsActivating] = useState(false);
@@ -155,57 +141,6 @@ const Dashboard = () => {
     setLoading(false);
   };
 
-  const handleAddServer = async () => {
-    if (!user) return;
-    if (!newServer.name || !newServer.season || !newServer.part || !newServer.exp_rate || !newServer.website) {
-      toast({ title: 'Error', description: 'Please fill all required fields', variant: 'destructive' });
-      return;
-    }
-
-    const { error } = await supabase.from('servers').insert([{
-      user_id: user.id,
-      name: newServer.name,
-      season: newServer.season,
-      part: newServer.part,
-      exp_rate: newServer.exp_rate,
-      website: newServer.website,
-      banner_url: newServer.banner_url || null,
-    }]);
-
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Success', description: 'Server added successfully' });
-      setNewServer({ name: '', season: '', part: '', exp_rate: '', website: '', banner_url: '' });
-      fetchUserData();
-    }
-  };
-
-  const handleAddAd = async () => {
-    if (!user) return;
-    if (!newAd.title || !newAd.website) {
-      toast({ title: 'Error', description: 'Please fill required fields', variant: 'destructive' });
-      return;
-    }
-
-    const { error } = await supabase.from('advertisements').insert([{
-      user_id: user.id,
-      ad_type: newAd.ad_type,
-      title: newAd.title,
-      description: newAd.description || null,
-      website: newAd.website,
-      banner_url: newAd.banner_url || null,
-    }]);
-
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Success', description: 'Advertisement added successfully' });
-      setNewAd({ ad_type: 'marketplace', title: '', description: '', website: '', banner_url: '' });
-      fetchUserData();
-    }
-  };
-
   const handleToggleServer = async (id: string, currentValue: boolean | null) => {
     const { error } = await supabase
       .from('servers')
@@ -287,81 +222,10 @@ const Dashboard = () => {
           {/* Servers Tab */}
           <TabsContent value="servers" className="space-y-6">
             <div className="glass-card p-6">
-              <h3 className="font-display text-lg font-semibold mb-4">Add New Server</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <Label>Server Name *</Label>
-                  <Input
-                    placeholder="My Awesome MU"
-                    value={newServer.name}
-                    onChange={(e) => setNewServer({ ...newServer, name: e.target.value })}
-                    className="bg-muted/50"
-                  />
-                </div>
-                <div>
-                  <Label>Season *</Label>
-                  <Input
-                    placeholder="Season 20"
-                    value={newServer.season}
-                    onChange={(e) => setNewServer({ ...newServer, season: e.target.value })}
-                    className="bg-muted/50"
-                  />
-                </div>
-                <div>
-                  <Label>Part *</Label>
-                  <Input
-                    placeholder="Part 2-3"
-                    value={newServer.part}
-                    onChange={(e) => setNewServer({ ...newServer, part: e.target.value })}
-                    className="bg-muted/50"
-                  />
-                </div>
-                <div>
-                  <Label>Exp Rate *</Label>
-                  <Input
-                    placeholder="x9999"
-                    value={newServer.exp_rate}
-                    onChange={(e) => setNewServer({ ...newServer, exp_rate: e.target.value })}
-                    className="bg-muted/50"
-                  />
-                </div>
-                <div>
-                  <Label>Website *</Label>
-                  <Input
-                    placeholder="www.myserver.com"
-                    value={newServer.website}
-                    onChange={(e) => setNewServer({ ...newServer, website: e.target.value })}
-                    className="bg-muted/50"
-                  />
-                </div>
-                <div>
-                  <Label>Banner Image</Label>
-                  <ImageUpload
-                    bucket="server-banners"
-                    userId={user.id}
-                    onUploadComplete={(url) => setNewServer({ ...newServer, banner_url: url })}
-                    currentImageUrl={newServer.banner_url}
-                    aspectRatio="468x60"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <Button onClick={handleAddServer} className="btn-fantasy-primary gap-2">
-                  <Plus size={16} />
-                  Add Server
-                </Button>
-                <Button variant="outline" onClick={() => navigate('/pricing')} className="gap-2">
-                  <Crown size={16} />
-                  Go Premium
-                </Button>
-              </div>
-            </div>
-
-            <div className="glass-card p-6">
               <h3 className="font-display text-lg font-semibold mb-4">Your Servers</h3>
               <div className="space-y-3">
                 {servers.length === 0 ? (
-                  <p className="text-muted-foreground">No servers yet. Add your first server above!</p>
+                  <p className="text-muted-foreground">No servers yet.</p>
                 ) : (
                   servers.map((server) => (
                     <div key={server.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
@@ -419,68 +283,10 @@ const Dashboard = () => {
           {/* Ads Tab */}
           <TabsContent value="ads" className="space-y-6">
             <div className="glass-card p-6">
-              <h3 className="font-display text-lg font-semibold mb-4">Add New Advertisement</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <Label>Type *</Label>
-                  <select
-                    value={newAd.ad_type}
-                    onChange={(e) => setNewAd({ ...newAd, ad_type: e.target.value as 'marketplace' | 'services' })}
-                    className="w-full h-10 px-3 bg-muted/50 border border-border rounded-md"
-                  >
-                    <option value="marketplace">Marketplace (Files, Antihacks, etc.)</option>
-                    <option value="services">Services (Videos, Configs, etc.)</option>
-                  </select>
-                </div>
-                <div>
-                  <Label>Title *</Label>
-                  <Input
-                    placeholder="My Product/Service"
-                    value={newAd.title}
-                    onChange={(e) => setNewAd({ ...newAd, title: e.target.value })}
-                    className="bg-muted/50"
-                  />
-                </div>
-                <div>
-                  <Label>Description</Label>
-                  <Input
-                    placeholder="Brief description"
-                    value={newAd.description}
-                    onChange={(e) => setNewAd({ ...newAd, description: e.target.value })}
-                    className="bg-muted/50"
-                  />
-                </div>
-                <div>
-                  <Label>Website *</Label>
-                  <Input
-                    placeholder="www.mysite.com"
-                    value={newAd.website}
-                    onChange={(e) => setNewAd({ ...newAd, website: e.target.value })}
-                    className="bg-muted/50"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <Label>Banner Image (268x60 recommended)</Label>
-                  <ImageUpload
-                    bucket="ad-banners"
-                    userId={user.id}
-                    onUploadComplete={(url) => setNewAd({ ...newAd, banner_url: url })}
-                    currentImageUrl={newAd.banner_url}
-                    aspectRatio="268x60"
-                  />
-                </div>
-              </div>
-              <Button onClick={handleAddAd} className="btn-fantasy-primary gap-2">
-                <Plus size={16} />
-                Add Advertisement
-              </Button>
-            </div>
-
-            <div className="glass-card p-6">
               <h3 className="font-display text-lg font-semibold mb-4">Your Advertisements</h3>
               <div className="space-y-3">
                 {ads.length === 0 ? (
-                  <p className="text-muted-foreground">No advertisements yet. Create your first ad above!</p>
+                  <p className="text-muted-foreground">No advertisements yet.</p>
                 ) : (
                   ads.map((ad) => (
                     <div key={ad.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
