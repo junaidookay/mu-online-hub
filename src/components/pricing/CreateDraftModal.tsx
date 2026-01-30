@@ -108,6 +108,13 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
     fetchPackages();
   }, [isOpen, slotId, initialPackageId]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!initialPackageId) return;
+    setSelectedPackageId(initialPackageId);
+    setStep('details');
+  }, [isOpen, initialPackageId]);
+
   // Fetch user's listings for Slot 7
   useEffect(() => {
     const fetchUserListings = async () => {
