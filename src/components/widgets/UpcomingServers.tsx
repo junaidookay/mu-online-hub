@@ -84,16 +84,20 @@ const UpcomingServers = () => {
                   : 'border-border/30 bg-muted/20 hover:border-border/50'
               }`}
             >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${isUpcoming(server.open_date) ? 'bg-green-500' : 'bg-blue-500'}`} />
-                <span className="text-xs font-semibold text-foreground">{server.name}</span>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${isUpcoming(server.open_date) ? 'bg-green-500' : 'bg-blue-500'}`} />
+                <span className="text-xs font-semibold text-foreground truncate">{server.name}</span>
               </div>
-              <span className="text-[10px] text-muted-foreground">{server.open_date || ''}</span>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">{server.exp_rate}</span>
-              <span className="text-[10px] text-muted-foreground">{server.season}</span>
+
+              <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">{server.exp_rate}</span>
+                <span className="text-[10px] text-muted-foreground">{server.season}</span>
+              </div>
+
+              <div className="flex justify-end min-w-0">
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{server.open_date || ''}</span>
+              </div>
             </div>
             </CardComponent>
           );
