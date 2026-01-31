@@ -13,30 +13,18 @@ import { SEOHead } from '@/components/SEOHead';
 import Header from '@/components/layout/Header';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, ShoppingBag, Wrench, Check } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Loader2, ArrowLeft, ShoppingBag, Wrench } from 'lucide-react';
 import { categoryLabels, marketplaceCategories, serviceCategories } from '@/lib/categories';
 
 type SellerCategory = Database["public"]["Enums"]["seller_category"];
 
-interface ListingPackage {
-  id: string;
-  name: string;
-  description: string | null;
-  duration_days: number;
-  price_cents: number;
-  display_order: number | null;
-  is_active: boolean | null;
-}
-
 type ListingType = 'marketplace' | 'services';
-type Step = 'type' | 'package' | 'details';
+type Step = 'type' | 'details';
 
 const CreateListing = () => {
   const [step, setStep] = useState<Step>('type');
   const [listingType, setListingType] = useState<ListingType>('marketplace');
-  const [packages, setPackages] = useState<ListingPackage[]>([]);
-  const [selectedPackageId, setSelectedPackageId] = useState('');
-  const [isLoadingPackages, setIsLoadingPackages] = useState(true);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -61,7 +49,6 @@ const CreateListing = () => {
   useEffect(() => {
     if (user) {
       fetchCategories();
-      fetchPackages();
     }
   }, [user]);
 
@@ -80,28 +67,6 @@ const CreateListing = () => {
       navigate('/seller-onboarding');
     }
     setIsLoadingCategories(false);
-  };
-
-  const fetchPackages = async () => {
-    setIsLoadingPackages(true);
-    try {
-      const { data, error } = await supabase
-        .from('listing_packages')
-        .select('id, name, description, duration_days, price_cents, display_order, is_active')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-
-      if (error) throw error;
-      const nextPackages = (data || []) as ListingPackage[];
-      setPackages(nextPackages);
-      if (nextPackages.length > 0) {
-        setSelectedPackageId(nextPackages[0].id);
-      }
-    } catch (error) {
-      console.error('Failed to fetch listing packages:', error);
-    } finally {
-      setIsLoadingPackages(false);
-    }
   };
 
   const marketplaceCategoryIds = new Set(marketplaceCategories.map(c => c.id));
@@ -134,11 +99,6 @@ const CreateListing = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!selectedPackageId) {
-      toast({ title: 'Error', description: 'Please select a package', variant: 'destructive' });
-      return;
-    }
 
     if (categoriesForType.length === 0) {
       toast({ title: 'Error', description: 'No categories available for this advertise type', variant: 'destructive' });
@@ -174,10 +134,6 @@ const CreateListing = () => {
 
       if (error) throw error;
 
-      if (data?.id) {
-        localStorage.setItem(`listing_publish_package:${data.id}`, selectedPackageId);
-      }
-
       toast({ title: 'Draft Created!', description: 'Your draft is saved in the seller dashboard. Publish when ready.' });
       navigate('/seller-dashboard');
     } catch (error: unknown) {
@@ -188,7 +144,7 @@ const CreateListing = () => {
     }
   };
 
-  if (authLoading || isLoadingCategories || isLoadingPackages) {
+  if (authLoading || isLoadingCategories) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -275,65 +231,7 @@ const CreateListing = () => {
                 <Button
                   type="button"
                   className="flex-1 btn-fantasy-primary"
-                  onClick={() => setStep('package')}
-                >
-                  Continue
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {step === 'package' && (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Label className="text-base font-semibold">Select Duration Package</Label>
-                {packages.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">No packages available.</div>
-                ) : (
-                  <div className="grid gap-3">
-                    {packages.map((pkg) => (
-                      <div
-                        key={pkg.id}
-                        onClick={() => setSelectedPackageId(pkg.id)}
-                        className={`relative flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${
-                          selectedPackageId === pkg.id
-                            ? 'border-primary bg-primary/10 ring-1 ring-primary'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                              selectedPackageId === pkg.id ? 'border-primary bg-primary' : 'border-muted-foreground'
-                            }`}
-                          >
-                            {selectedPackageId === pkg.id && <Check className="w-3 h-3 text-primary-foreground" />}
-                          </div>
-                          <div>
-                            <div className="font-medium">{pkg.name}</div>
-                            <div className="text-sm text-muted-foreground">{pkg.duration_days} days</div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold text-primary">
-                            ${(pkg.price_cents / 100).toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="pt-2 flex gap-4">
-                <Button type="button" variant="outline" onClick={() => setStep('type')} className="flex-1">
-                  Back
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1 btn-fantasy-primary"
                   onClick={() => setStep('details')}
-                  disabled={!selectedPackageId}
                 >
                   Continue
                 </Button>
@@ -343,6 +241,13 @@ const CreateListing = () => {
 
           {step === 'details' && (
             <form onSubmit={handleSubmit} className="space-y-6">
+              <Alert>
+                <AlertTitle>Draft Mode</AlertTitle>
+                <AlertDescription>
+                  Creating this listing saves a draft. When you click Publish in your dashboard, you’ll choose a package (7/15/30 days) and complete payment.
+                </AlertDescription>
+              </Alert>
+
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
                 <Select value={category} onValueChange={(value) => setCategory(value as SellerCategory)}>
@@ -421,7 +326,7 @@ const CreateListing = () => {
               )}
 
               <div className="pt-4 flex gap-4">
-                <Button type="button" variant="outline" onClick={() => setStep('package')} className="flex-1">
+                <Button type="button" variant="outline" onClick={() => setStep('type')} className="flex-1">
                   Back
                 </Button>
                 <Button type="submit" className="flex-1 btn-fantasy-primary" disabled={isSubmitting}>
