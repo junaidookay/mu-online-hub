@@ -260,13 +260,29 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
           break;
 
         case 'premium_banners':
-          toast({
-            title: 'Not Supported',
-            description: 'Main Banner drafts require admin assistance. Please contact support.',
-            variant: 'destructive',
-          });
-          setLoading(false);
-          return;
+          if (!formData.name.trim()) {
+            throw new Error('Banner title is required');
+          }
+          if (!formData.website.trim()) {
+            throw new Error('Website is required');
+          }
+          if (!formData.bannerUrl) {
+            throw new Error('Banner image is required');
+          }
+
+          result = await supabase
+            .from('premium_banners')
+            .insert({
+              user_id: user.id,
+              title: formData.name.trim(),
+              website: formData.website.trim(),
+              image_url: formData.bannerUrl,
+              slot_id: slotId,
+              is_active: false,
+            })
+            .select('id')
+            .single();
+          break;
 
         case 'rotating_promos':
           if (slotId === 7) {
@@ -602,6 +618,43 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
                 onChange={(e) => handleChange('website', e.target.value)}
                 placeholder="yourserver.com"
                 required
+              />
+            </div>
+          </>
+        );
+
+      case 'premium_banners':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="name">Server/Site Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Your server or site name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="website">Website *</Label>
+              <Input
+                id="website"
+                value={formData.website}
+                onChange={(e) => handleChange('website', e.target.value)}
+                placeholder="yoursite.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Banner Image (Required) *</Label>
+              <ImageUpload
+                bucket="banners"
+                userId={user?.id || ''}
+                onUploadComplete={(url) => handleChange('bannerUrl', url)}
+                currentImageUrl={formData.bannerUrl}
+                maxSizeMB={5}
+                aspectRatio="800x200"
               />
             </div>
           </>

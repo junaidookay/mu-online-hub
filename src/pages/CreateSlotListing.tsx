@@ -308,9 +308,24 @@ const CreateSlotListing = () => {
           break;
 
         case 'premium_banners':
+          {
+            const maxAllowed = getSlotConfig(5)?.maxListings ?? 3;
+            const { count, error: countError } = await supabase
+              .from('premium_banners')
+              .select('id', { count: 'exact', head: true })
+              .eq('slot_id', 5)
+              .eq('is_active', true);
+
+            if (countError) throw countError;
+            if ((count ?? 0) >= maxAllowed) {
+              throw new Error(`Main Banner is currently full (max ${maxAllowed} active banners). Please try again later.`);
+            }
+          }
+
           result = await supabase
             .from('premium_banners')
             .insert({
+              user_id: user.id,
               title: formData.name,
               website: formData.website,
               image_url: formData.bannerUrl,
@@ -538,15 +553,17 @@ const CreateSlotListing = () => {
                 required
               />
             </div>
-            <div>
-              <Label htmlFor="features">Features (comma-separated)</Label>
-              <Input
-                id="features"
-                value={formData.features}
-                onChange={(e) => handleChange('features', e.target.value)}
-                placeholder="PVP Focused, Custom Wings, Long-term"
-              />
-            </div>
+            {slotId !== 6 && (
+              <div>
+                <Label htmlFor="features">Features (comma-separated)</Label>
+                <Input
+                  id="features"
+                  value={formData.features}
+                  onChange={(e) => handleChange('features', e.target.value)}
+                  placeholder="PVP Focused, Custom Wings, Long-term"
+                />
+              </div>
+            )}
             {slotId !== 6 && (
               <div>
                 <Label>Banner Image</Label>

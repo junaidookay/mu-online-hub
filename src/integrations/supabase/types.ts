@@ -501,6 +501,7 @@ export type Database = {
           slot_id: number | null
           title: string
           updated_at: string
+          user_id: string | null
           website: string
         }
         Insert: {
@@ -512,6 +513,7 @@ export type Database = {
           slot_id?: number | null
           title: string
           updated_at?: string
+          user_id?: string | null
           website: string
         }
         Update: {
@@ -523,6 +525,7 @@ export type Database = {
           slot_id?: number | null
           title?: string
           updated_at?: string
+          user_id?: string | null
           website?: string
         }
         Relationships: []

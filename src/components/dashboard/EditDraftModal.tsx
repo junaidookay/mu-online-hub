@@ -57,6 +57,12 @@ interface PromoData {
   link: string | null;
 }
 
+interface BannerData {
+  title: string;
+  website: string;
+  image_url: string;
+}
+
 export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraftModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -172,6 +178,24 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
             }
             break;
           }
+
+          case 'banner': {
+            const { data: bannerData } = await supabase
+              .from('premium_banners')
+              .select('title, website, image_url')
+              .eq('id', listing.id)
+              .single();
+            data = bannerData as BannerData | null;
+            if (data && 'image_url' in data) {
+              setFormData({
+                ...formData,
+                name: data.title || '',
+                website: data.website || '',
+                bannerUrl: data.image_url || '',
+              });
+            }
+            break;
+          }
         }
       } catch (error) {
         console.error('Error fetching draft data:', error);
@@ -253,6 +277,18 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
             .eq('user_id', user.id));
           break;
 
+        case 'banner':
+          ({ error } = await supabase
+            .from('premium_banners')
+            .update({
+              title: formData.name,
+              website: formData.website,
+              image_url: formData.bannerUrl,
+            })
+            .eq('id', listing.id)
+            .eq('user_id', user.id));
+          break;
+
         default:
           throw new Error('Unknown listing type');
       }
@@ -322,6 +358,43 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
                 currentImageUrl={formData.bannerUrl}
                 maxSizeMB={5}
                 aspectRatio="468x60"
+              />
+            </div>
+          </>
+        );
+
+      case 'banner':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="name">Server/Site Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Your server or site name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="website">Website *</Label>
+              <Input
+                id="website"
+                value={formData.website}
+                onChange={(e) => handleChange('website', e.target.value)}
+                placeholder="yoursite.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Banner Image (Required) *</Label>
+              <ImageUpload
+                bucket="banners"
+                userId={user?.id || ''}
+                onUploadComplete={(url) => handleChange('bannerUrl', url)}
+                currentImageUrl={formData.bannerUrl}
+                maxSizeMB={5}
+                aspectRatio="800x200"
               />
             </div>
           </>

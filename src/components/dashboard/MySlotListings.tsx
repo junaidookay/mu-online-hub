@@ -123,6 +123,16 @@ export const MySlotListings = ({ refreshToken }: MySlotListingsProps) => {
         setSlotPurchases(purchases);
       }
 
+      const getLatestExpiresAtForSlot = (slotId: number | null): string | null => {
+        if (!slotId || !purchases || purchases.length === 0) return null;
+        const expiresAts = purchases
+          .filter((p) => p.slot_id === slotId && p.expires_at)
+          .map((p) => p.expires_at as string);
+        if (expiresAts.length === 0) return null;
+        expiresAts.sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+        return expiresAts[0] ?? null;
+      };
+
       // Fetch all user's slot-based listings
       const allListings: SlotListing[] = [];
 
@@ -182,6 +192,25 @@ export const MySlotListings = ({ refreshToken }: MySlotListingsProps) => {
         })));
       }
 
+      // Premium banners (slot 5)
+      const { data: banners } = await supabase
+        .from('premium_banners')
+        .select('id, title, website, slot_id, is_active, created_at')
+        .eq('user_id', user.id);
+
+      if (banners) {
+        allListings.push(...banners.map(b => ({
+          id: b.id,
+          type: 'banner' as const,
+          name: b.title,
+          website: b.website,
+          slot_id: b.slot_id,
+          is_active: b.is_active,
+          expires_at: getLatestExpiresAtForSlot(b.slot_id),
+          created_at: b.created_at,
+        })));
+      }
+
       // Sort by created_at descending
       allListings.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setListings(allListings);
@@ -221,7 +250,7 @@ export const MySlotListings = ({ refreshToken }: MySlotListingsProps) => {
   const handleDelete = async () => {
     if (!listingToDelete) return;
 
-    let tableName: 'servers' | 'advertisements' | 'premium_text_servers' | 'rotating_promos';
+    let tableName: 'servers' | 'advertisements' | 'premium_text_servers' | 'rotating_promos' | 'premium_banners';
     switch (listingToDelete.type) {
       case 'server':
         tableName = 'servers';
@@ -235,14 +264,15 @@ export const MySlotListings = ({ refreshToken }: MySlotListingsProps) => {
       case 'promo':
         tableName = 'rotating_promos';
         break;
+      case 'banner':
+        tableName = 'premium_banners';
+        break;
       default:
         return;
     }
 
-    const { error } = await supabase
-      .from(tableName)
-      .delete()
-      .eq('id', listingToDelete.id);
+    const query = supabase.from(tableName).delete().eq('id', listingToDelete.id);
+    const { error } = tableName === 'premium_banners' ? await query.eq('user_id', user?.id || '') : await query;
 
     if (error) {
       toast({
@@ -262,8 +292,35 @@ export const MySlotListings = ({ refreshToken }: MySlotListingsProps) => {
     setListingToDelete(null);
   };
 
-  const handlePayAndPublish = (listing: SlotListing) => {
+  const handlePayAndPublish = async (listing: SlotListing) => {
     if (!listing.slot_id) return;
+
+    if (listing.type === 'banner' && listing.slot_id === 5) {
+      const maxAllowed = getSlotConfig(5)?.maxListings ?? 3;
+      const { count, error } = await supabase
+        .from('premium_banners')
+        .select('id', { count: 'exact', head: true })
+        .eq('slot_id', 5)
+        .eq('is_active', true);
+
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to check Main Banner availability. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if ((count ?? 0) >= maxAllowed) {
+        toast({
+          title: 'Main Banner Full',
+          description: `Slot 5 currently has the maximum (${maxAllowed}) active banners. Please try again later.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
     
     // Find the cheapest package for this slot
     const slotPackages = packages.filter(p => p.slot_id === listing.slot_id);
