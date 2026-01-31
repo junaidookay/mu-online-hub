@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,14 @@ const PublishListing = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+
+  const selectPackage = (packageId: string) => {
+    setSelectedPackage(packageId);
+    if (id) {
+      localStorage.setItem(`listing_publish_package:${id}`, packageId);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -121,8 +129,18 @@ const PublishListing = () => {
 
       if (packagesResult.data) {
         setPackages(packagesResult.data);
-        if (packagesResult.data.length > 0) {
-          setSelectedPackage(packagesResult.data[0].id);
+        const queryPackageId = searchParams.get('package');
+        const storedPackageId = id ? localStorage.getItem(`listing_publish_package:${id}`) : null;
+
+        const preferredPackageId =
+          (queryPackageId && packagesResult.data.some((p) => p.id === queryPackageId) ? queryPackageId : null) ||
+          (storedPackageId && packagesResult.data.some((p) => p.id === storedPackageId) ? storedPackageId : null) ||
+          null;
+
+        if (preferredPackageId) {
+          selectPackage(preferredPackageId);
+        } else if (packagesResult.data.length > 0) {
+          selectPackage(packagesResult.data[0].id);
         }
       }
 
@@ -289,7 +307,7 @@ const PublishListing = () => {
             return (
               <Card 
                 key={pkg.id}
-                onClick={() => setSelectedPackage(pkg.id)}
+                onClick={() => selectPackage(pkg.id)}
                 className={`cursor-pointer transition-all relative ${
                   isSelected 
                     ? 'glass-card-glow border-primary' 
