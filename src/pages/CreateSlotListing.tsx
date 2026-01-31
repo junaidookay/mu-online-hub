@@ -38,6 +38,8 @@ const CreateSlotListing = () => {
   const slotConfig = getSlotConfig(slotId);
 
   const [loading, setLoading] = useState(false);
+  const [accessReady, setAccessReady] = useState(slotId === 6);
+  const [accessChecking, setAccessChecking] = useState(false);
   
   // Slot 7 specific state
   const [userListings, setUserListings] = useState<UserListing[]>([]);
@@ -77,26 +79,70 @@ const CreateSlotListing = () => {
       if (!user || !slotConfig) return;
       
       // Slot 6 is free - no purchase required
-      if (slotId === 6) return;
+      if (slotId === 6) {
+        setAccessReady(true);
+        setAccessChecking(false);
+        return;
+      }
+
+      setAccessChecking(true);
+      setAccessReady(false);
+
+      const nowIso = new Date().toISOString();
+
+      const hasActivePurchase = async () => {
+        const { data } = await supabase
+          .from('slot_purchases')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('slot_id', slotId)
+          .eq('is_active', true)
+          .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+          .maybeSingle();
+
+        return !!data;
+      };
+
+      const activeNow = await hasActivePurchase();
+      if (activeNow) {
+        setAccessReady(true);
+        setAccessChecking(false);
+        return;
+      }
       
-      // Check for active slot purchase
-      const { data: purchase } = await supabase
-        .from('slot_purchases')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('slot_id', slotId)
-        .eq('is_active', true)
-        .gte('expires_at', new Date().toISOString())
-        .maybeSingle();
-      
-      if (!purchase && !paymentSuccess) {
+      if (!paymentSuccess) {
         toast({
           title: 'Package Required',
           description: 'Please purchase a package to create a listing in this slot.',
           variant: 'destructive',
         });
         navigate('/pricing');
+        setAccessChecking(false);
+        return;
       }
+
+      toast({
+        title: 'Activating Purchase',
+        description: 'Payment is processing. This usually takes a few seconds.',
+      });
+
+      const delays = [800, 1500, 2500, 4000];
+      for (const delay of delays) {
+        await new Promise<void>((resolve) => setTimeout(resolve, delay));
+        const activeAfterDelay = await hasActivePurchase();
+        if (activeAfterDelay) {
+          setAccessReady(true);
+          setAccessChecking(false);
+          return;
+        }
+      }
+
+      setAccessChecking(false);
+      toast({
+        title: 'Still Processing',
+        description: 'Your payment is still being confirmed. Please wait a moment and try again.',
+        variant: 'destructive',
+      });
     };
     
     if (user && !authLoading) {
@@ -181,6 +227,14 @@ const CreateSlotListing = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (slotId !== 6 && !accessReady) {
+      toast({
+        title: 'Not Ready Yet',
+        description: 'Your package is still being activated. Please wait a few seconds and try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     setLoading(true);
     if (slotConfig.table === 'premium_banners' && !formData.bannerUrl) {
@@ -813,7 +867,7 @@ const CreateSlotListing = () => {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || accessChecking || (slotId !== 6 && !accessReady)}
               className="w-full btn-fantasy-primary"
             >
               {loading ? (
@@ -821,6 +875,8 @@ const CreateSlotListing = () => {
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   Creating...
                 </>
+              ) : accessChecking || (slotId !== 6 && !accessReady) ? (
+                'Waiting for activation...'
               ) : (
                 'Create Listing'
               )}
