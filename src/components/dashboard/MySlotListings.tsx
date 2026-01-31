@@ -61,7 +61,11 @@ interface PricingPackage {
   slot_id: number | null;
 }
 
-export const MySlotListings = () => {
+type MySlotListingsProps = {
+  refreshToken?: number;
+};
+
+export const MySlotListings = ({ refreshToken }: MySlotListingsProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -89,7 +93,7 @@ export const MySlotListings = () => {
       fetchData();
       fetchPackages();
     }
-  }, [user]);
+  }, [user, refreshToken]);
 
   const fetchPackages = async () => {
     const { data } = await supabase

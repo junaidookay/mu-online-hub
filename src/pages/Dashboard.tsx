@@ -31,12 +31,23 @@ const Dashboard = () => {
   const [servers, setServers] = useState<ServerType[]>([]);
   const [ads, setAds] = useState<AdvertisementType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [homepageListingsRefreshToken, setHomepageListingsRefreshToken] = useState(0);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [isActivating, setIsActivating] = useState(false);
 
   // Handle payment success - activate draft directly (no webhook needed)
   useEffect(() => {
+    const refreshTimeouts: number[] = [];
+
+    const triggerHomepageListingsRefresh = () => {
+      setHomepageListingsRefreshToken((t) => t + 1);
+      refreshTimeouts.push(
+        window.setTimeout(() => setHomepageListingsRefreshToken((t) => t + 1), 1500),
+        window.setTimeout(() => setHomepageListingsRefreshToken((t) => t + 1), 4000)
+      );
+    };
+
     const activateDraft = async () => {
       const paymentStatus = searchParams.get('payment');
       const draftId = searchParams.get('draftId');
@@ -88,6 +99,7 @@ const Dashboard = () => {
           });
         } finally {
           setIsActivating(false);
+          triggerHomepageListingsRefresh();
         }
       } else if (paymentStatus === 'success') {
         // Generic success without draft info
@@ -95,6 +107,7 @@ const Dashboard = () => {
           title: 'Payment Successful!',
           description: 'Your premium feature has been activated.',
         });
+        if (draftId) triggerHomepageListingsRefresh();
       } else if (paymentStatus === 'cancelled') {
         toast({
           title: 'Payment Cancelled',
@@ -105,6 +118,9 @@ const Dashboard = () => {
     };
 
     activateDraft();
+    return () => {
+      refreshTimeouts.forEach((t) => window.clearTimeout(t));
+    };
   }, [searchParams, setSearchParams, toast]);
 
   useEffect(() => {
@@ -216,7 +232,7 @@ const Dashboard = () => {
 
           {/* Homepage Listings Tab */}
           <TabsContent value="homepage" className="space-y-6">
-            <MySlotListings />
+            <MySlotListings refreshToken={homepageListingsRefreshToken} />
           </TabsContent>
 
           {/* Servers Tab */}
