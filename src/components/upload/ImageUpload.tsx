@@ -28,6 +28,83 @@ export const ImageUpload = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const getBucketLabel = () => {
+    switch (bucket) {
+      case 'banners':
+        return 'Main Banner';
+      case 'server-banners':
+        return 'Server Banners';
+      case 'ad-banners':
+        return 'Advertisement Banners';
+      default:
+        return 'this area';
+    }
+  };
+
+  const formatUploadError = (error: unknown): { title: string; description: string } => {
+    const fallback = {
+      title: 'Upload Failed',
+      description: 'Failed to upload image. Please try again.',
+    };
+
+    if (!error) return fallback;
+
+    const asRecord = error && typeof error === 'object' ? (error as Record<string, unknown>) : null;
+    const rawMessage =
+      error instanceof Error
+        ? error.message
+        : typeof asRecord?.message === 'string'
+          ? asRecord.message
+          : '';
+
+    const message = rawMessage.trim();
+    const messageLower = message.toLowerCase();
+
+    const statusCode =
+      typeof asRecord?.statusCode === 'number'
+        ? asRecord.statusCode
+        : typeof asRecord?.status === 'number'
+          ? asRecord.status
+          : undefined;
+
+    if (!userId || statusCode === 401 || messageLower.includes('jwt') || messageLower.includes('not authenticated')) {
+      return {
+        title: 'Sign In Required',
+        description: 'Please sign in to upload images.',
+      };
+    }
+
+    if (
+      statusCode === 403 ||
+      messageLower.includes('row-level security') ||
+      messageLower.includes('permission denied') ||
+      messageLower.includes('not allowed')
+    ) {
+      return {
+        title: 'Upload Not Allowed',
+        description: `You don’t have permission to upload images for ${getBucketLabel()}. Please contact support if you believe this is a mistake.`,
+      };
+    }
+
+    if (statusCode === 413 || messageLower.includes('payload too large') || messageLower.includes('too large')) {
+      return {
+        title: 'Upload Failed',
+        description: `File too large. Maximum size is ${maxSizeMB}MB.`,
+      };
+    }
+
+    if (!message) return fallback;
+
+    if (messageLower.includes('row-level security') || messageLower.includes('storageapierror')) {
+      return fallback;
+    }
+
+    return {
+      title: 'Upload Failed',
+      description: message,
+    };
+  };
+
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
       return 'Invalid file type. Please upload JPG, PNG, GIF, or WebP images only.';
@@ -44,6 +121,18 @@ export const ImageUpload = ({
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    if (!userId) {
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in to upload images.',
+        variant: 'destructive',
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
 
     const validationError = validateFile(file);
     if (validationError) {
@@ -87,12 +176,13 @@ export const ImageUpload = ({
         description: 'Your image has been uploaded successfully.',
       });
 
-  } catch (error: unknown) {
+    } catch (error: unknown) {
       console.error('Upload error:', error);
       setPreview(currentImageUrl || null);
+      const { title, description } = formatUploadError(error);
       toast({
-        title: 'Upload Failed',
-        description: error instanceof Error ? error.message : 'Failed to upload image. Please try again.',
+        title,
+        description,
         variant: 'destructive',
       });
     } finally {

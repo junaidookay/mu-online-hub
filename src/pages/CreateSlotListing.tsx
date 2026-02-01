@@ -317,8 +317,28 @@ const CreateSlotListing = () => {
               .eq('is_active', true);
 
             if (countError) throw countError;
-            if ((count ?? 0) >= maxAllowed) {
-              throw new Error(`Main Banner is currently full (max ${maxAllowed} active banners). Please try again later.`);
+            const activeCount = count ?? 0;
+            if (activeCount >= maxAllowed) {
+              let nextAvailableAt: string | null = null;
+              const nowIso = new Date().toISOString();
+              const { data: nextPurchase } = await supabase
+                .from('slot_purchases')
+                .select('expires_at')
+                .eq('slot_id', 5)
+                .eq('is_active', true)
+                .not('expires_at', 'is', null)
+                .gt('expires_at', nowIso)
+                .order('expires_at', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+
+              nextAvailableAt = nextPurchase?.expires_at ?? null;
+
+              if (nextAvailableAt) {
+                const nextLabel = new Date(nextAvailableAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                throw new Error(`Main Banner is currently full (${activeCount}/${maxAllowed} active). Next slot may open on ${nextLabel}.`);
+              }
+              throw new Error(`Main Banner is currently full (${activeCount}/${maxAllowed} active). Please try again later.`);
             }
           }
 

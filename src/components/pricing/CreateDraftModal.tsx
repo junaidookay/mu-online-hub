@@ -58,6 +58,13 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
   const [selectedListingId, setSelectedListingId] = useState<string>('');
   const [loadingListings, setLoadingListings] = useState(false);
 
+  const [bannerAvailability, setBannerAvailability] = useState<{
+    activeCount: number;
+    maxAllowed: number;
+    nextAvailableAt: string | null;
+  } | null>(null);
+  const [loadingBannerAvailability, setLoadingBannerAvailability] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     title: '',
@@ -114,6 +121,55 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
     setSelectedPackageId(initialPackageId);
     setStep('details');
   }, [isOpen, initialPackageId]);
+
+  useEffect(() => {
+    const fetchBannerAvailability = async () => {
+      if (!isOpen) return;
+      if (slotId !== 5) {
+        setBannerAvailability(null);
+        return;
+      }
+
+      const maxAllowed = getSlotConfig(5)?.maxListings ?? 3;
+      setLoadingBannerAvailability(true);
+      try {
+        const { count, error } = await supabase
+          .from('premium_banners')
+          .select('id', { count: 'exact', head: true })
+          .eq('slot_id', 5)
+          .eq('is_active', true);
+
+        if (error) throw error;
+
+        const activeCount = count ?? 0;
+        let nextAvailableAt: string | null = null;
+
+        if (activeCount >= maxAllowed) {
+          const nowIso = new Date().toISOString();
+          const { data: nextPurchase } = await supabase
+            .from('slot_purchases')
+            .select('expires_at')
+            .eq('slot_id', 5)
+            .eq('is_active', true)
+            .not('expires_at', 'is', null)
+            .gt('expires_at', nowIso)
+            .order('expires_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          nextAvailableAt = nextPurchase?.expires_at ?? null;
+        }
+
+        setBannerAvailability({ activeCount, maxAllowed, nextAvailableAt });
+      } catch {
+        setBannerAvailability(null);
+      } finally {
+        setLoadingBannerAvailability(false);
+      }
+    };
+
+    fetchBannerAvailability();
+  }, [isOpen, slotId]);
 
   // Fetch user's listings for Slot 7
   useEffect(() => {
@@ -187,6 +243,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const formatDateLabel = (iso: string) => {
+    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   const selectedPackage = packages.find(p => p.id === selectedPackageId);
@@ -391,6 +451,41 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
 
     return (
       <div className="space-y-4">
+        {slotId === 5 && (
+          <div
+            className={`p-3 rounded-lg border ${
+              bannerAvailability && bannerAvailability.activeCount >= bannerAvailability.maxAllowed
+                ? 'bg-destructive/10 border-destructive/30'
+                : 'bg-muted/30 border-border/50'
+            }`}
+          >
+            {loadingBannerAvailability ? (
+              <div className="text-sm text-muted-foreground">Checking Main Banner availability…</div>
+            ) : bannerAvailability ? (
+              bannerAvailability.activeCount >= bannerAvailability.maxAllowed ? (
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">Main Banner is currently full</div>
+                  <div className="text-sm text-muted-foreground">
+                    Current active banners: {bannerAvailability.activeCount}/{bannerAvailability.maxAllowed}.
+                  </div>
+                  {bannerAvailability.nextAvailableAt ? (
+                    <div className="text-sm text-muted-foreground">
+                      One banner expires on {formatDateLabel(bannerAvailability.nextAvailableAt)}. You can buy a slot then.
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">Please try again later.</div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  Current active banners: {bannerAvailability.activeCount}/{bannerAvailability.maxAllowed}.
+                </div>
+              )
+            ) : (
+              <div className="text-sm text-muted-foreground">Availability info is temporarily unavailable.</div>
+            )}
+          </div>
+        )}
         <Label className="text-base font-semibold">Select Duration Package</Label>
         <div className="grid gap-3">
           {packages.map((pkg) => (

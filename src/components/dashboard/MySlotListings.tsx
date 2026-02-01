@@ -312,10 +312,28 @@ export const MySlotListings = ({ refreshToken }: MySlotListingsProps) => {
         return;
       }
 
-      if ((count ?? 0) >= maxAllowed) {
+      const activeCount = count ?? 0;
+      if (activeCount >= maxAllowed) {
+        let nextAvailableAt: string | null = null;
+        const nowIso = new Date().toISOString();
+        const { data: nextPurchase } = await supabase
+          .from('slot_purchases')
+          .select('expires_at')
+          .eq('slot_id', 5)
+          .eq('is_active', true)
+          .not('expires_at', 'is', null)
+          .gt('expires_at', nowIso)
+          .order('expires_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        nextAvailableAt = nextPurchase?.expires_at ?? null;
+
         toast({
           title: 'Main Banner Full',
-          description: `Slot 5 currently has the maximum (${maxAllowed}) active banners. Please try again later.`,
+          description: nextAvailableAt
+            ? `Current active banners: ${activeCount}/${maxAllowed}. Next slot may open on ${format(new Date(nextAvailableAt), 'MMM d, yyyy')}.`
+            : `Current active banners: ${activeCount}/${maxAllowed}. Please try again later.`,
           variant: 'destructive',
         });
         return;
