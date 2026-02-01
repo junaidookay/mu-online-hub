@@ -28,6 +28,8 @@ export const ImageUpload = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const storageBucket: ImageUploadProps['bucket'] = bucket === 'banners' ? 'ad-banners' : bucket;
+
   const getBucketLabel = () => {
     switch (bucket) {
       case 'banners':
@@ -156,7 +158,7 @@ export const ImageUpload = ({
       const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
       const { data, error } = await supabase.storage
-        .from(bucket)
+        .from(storageBucket)
         .upload(fileName, file, {
           cacheControl: '3600',
           upsert: false,
@@ -166,7 +168,7 @@ export const ImageUpload = ({
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from(bucket)
+        .from(storageBucket)
         .getPublicUrl(data.path);
 
       onUploadComplete(urlData.publicUrl);
