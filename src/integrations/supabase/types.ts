@@ -44,6 +44,7 @@ export type Database = {
         Row: {
           ad_type: Database["public"]["Enums"]["ad_type"]
           banner_url: string | null
+          category: Database["public"]["Enums"]["seller_category"] | null
           created_at: string
           description: string | null
           expires_at: string | null
@@ -61,6 +62,7 @@ export type Database = {
         Insert: {
           ad_type: Database["public"]["Enums"]["ad_type"]
           banner_url?: string | null
+          category?: Database["public"]["Enums"]["seller_category"] | null
           created_at?: string
           description?: string | null
           expires_at?: string | null
@@ -78,6 +80,7 @@ export type Database = {
         Update: {
           ad_type?: Database["public"]["Enums"]["ad_type"]
           banner_url?: string | null
+          category?: Database["public"]["Enums"]["seller_category"] | null
           created_at?: string
           description?: string | null
           expires_at?: string | null

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -13,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Check } from 'lucide-react';
 import { getSlotConfig, SLOT_CONFIG } from '@/lib/slotConfig';
 import { ImageUpload } from '@/components/upload/ImageUpload';
+import { categoryLabels, marketplaceCategories, serviceCategories } from '@/lib/categories';
 
 type SellerCategory = Database["public"]["Enums"]["seller_category"];
 
@@ -57,6 +59,8 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
   const [selectedListingType, setSelectedListingType] = useState<'marketplace' | 'services'>('marketplace');
   const [selectedListingId, setSelectedListingId] = useState<string>('');
   const [loadingListings, setLoadingListings] = useState(false);
+  const [availableCategories, setAvailableCategories] = useState<SellerCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
 
   const [bannerAvailability, setBannerAvailability] = useState<{
     activeCount: number;
@@ -68,6 +72,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
   const [formData, setFormData] = useState({
     name: '',
     title: '',
+    category: '',
     description: '',
     priceUsd: '',
     website: '',
@@ -217,6 +222,45 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
     fetchUserListings();
   }, [user, slotId, selectedListingType]);
 
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (!isOpen) return;
+      if (!user) return;
+      if (slotConfig?.table !== 'advertisements') {
+        setAvailableCategories([]);
+        return;
+      }
+
+      setLoadingCategories(true);
+      try {
+        const { data, error } = await supabase
+          .from('seller_categories')
+          .select('category')
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
+        const selected = (data ?? []).map((row) => row.category as SellerCategory);
+        const allowedIds = new Set(
+          (slotId === 1 ? marketplaceCategories : serviceCategories).map((category) => category.id)
+        );
+        const filtered = selected.filter((category) => allowedIds.has(category));
+
+        setAvailableCategories(filtered);
+        setFormData((prev) => {
+          if (prev.category && filtered.includes(prev.category as SellerCategory)) return prev;
+          return { ...prev, category: filtered[0] ?? '' };
+        });
+      } catch {
+        setAvailableCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [isOpen, user, slotConfig?.table, slotId]);
+
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
@@ -225,6 +269,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
       setFormData({
         name: '',
         title: '',
+        category: '',
         description: '',
         priceUsd: '',
         website: '',
@@ -279,11 +324,15 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
 
       switch (tableName) {
         case 'advertisements':
+          if (!formData.category) {
+            throw new Error('Category is required');
+          }
           result = await supabase
             .from('advertisements')
             .insert({
               user_id: user.id,
               title: formData.title || formData.name,
+              category: formData.category as SellerCategory,
               description: formData.description,
               price_usd: formData.priceUsd ? parseFloat(formData.priceUsd) : null,
               website: formData.website,
@@ -579,6 +628,34 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
       case 'advertisements':
         return (
           <>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category *</Label>
+              {loadingCategories ? (
+                <div className="text-sm text-muted-foreground">Loading categories…</div>
+              ) : availableCategories.length > 0 ? (
+                <Select value={formData.category} onValueChange={(v) => handleChange('category', v)}>
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCategories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {categoryLabels[category] ?? category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground">
+                    No categories selected. Please set your categories in your seller dashboard first.
+                  </div>
+                  <Button variant="link" size="sm" asChild className="h-auto p-0">
+                    <Link to="/seller/manage-categories">Manage categories</Link>
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
               <Input

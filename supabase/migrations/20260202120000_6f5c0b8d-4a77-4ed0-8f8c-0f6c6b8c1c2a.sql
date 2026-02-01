@@ -1,6 +1,9 @@
 alter table public.advertisements
 add column if not exists price_usd numeric null;
 
+alter table public.advertisements
+add column if not exists category public.seller_category null;
+
 do $$
 begin
   if not exists (

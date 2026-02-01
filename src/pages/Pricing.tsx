@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
@@ -11,7 +11,6 @@ import { SEOHead } from '@/components/SEOHead';
 import { SLOT_CONFIG, getSlotRedirectUrl, isSlotFree, FREE_SLOT_ID } from '@/lib/slotConfig';
 import { Badge } from '@/components/ui/badge';
 import { CreateDraftModal } from '@/components/pricing/CreateDraftModal';
-import { categoryLabels, marketplaceCategories, serviceCategories } from '@/lib/categories';
 
 interface PricingPackage {
   id: string;
@@ -35,35 +34,10 @@ const Pricing = () => {
   const [draftModalOpen, setDraftModalOpen] = useState(false);
   const [draftSlotId, setDraftSlotId] = useState<number | null>(null);
   const [draftPackageId, setDraftPackageId] = useState<string | null>(null);
-  const [sellerCategories, setSellerCategories] = useState<string[]>([]);
-  const [loadingSellerCategories, setLoadingSellerCategories] = useState(false);
 
   useEffect(() => {
     fetchPackages();
   }, []);
-
-  useEffect(() => {
-    const fetchSellerCategories = async () => {
-      if (!user) {
-        setSellerCategories([]);
-        return;
-      }
-
-      setLoadingSellerCategories(true);
-      const { data, error } = await supabase
-        .from('seller_categories')
-        .select('category')
-        .eq('user_id', user.id);
-
-      if (!error) {
-        setSellerCategories((data ?? []).map((row) => row.category));
-      }
-
-      setLoadingSellerCategories(false);
-    };
-
-    fetchSellerCategories();
-  }, [user]);
 
   const fetchPackages = async () => {
     const { data, error } = await supabase
@@ -143,17 +117,6 @@ const Pricing = () => {
     if (!slotId) return 'General';
     return SLOT_CONFIG[slotId as keyof typeof SLOT_CONFIG]?.name || 'General';
   };
-
-  const marketplaceCategoryIds = useMemo(() => new Set(marketplaceCategories.map((c) => c.id)), []);
-  const serviceCategoryIds = useMemo(() => new Set(serviceCategories.map((c) => c.id)), []);
-
-  const marketplaceSelectedCategories = useMemo(() => {
-    return sellerCategories.filter((c) => marketplaceCategoryIds.has(c));
-  }, [sellerCategories, marketplaceCategoryIds]);
-
-  const serviceSelectedCategories = useMemo(() => {
-    return sellerCategories.filter((c) => serviceCategoryIds.has(c));
-  }, [sellerCategories, serviceCategoryIds]);
 
   // Group packages by slot_id (excluding slot 6)
   const groupedPackages = packages.reduce((acc, pkg) => {
@@ -249,31 +212,6 @@ const Pricing = () => {
                 <p className="text-sm text-muted-foreground mt-1">
                   {SLOT_CONFIG[slotId as keyof typeof SLOT_CONFIG]?.description || ''}
                 </p>
-                {(slotId === 1 || slotId === 2) && user && (
-                  <div className="mt-3 space-y-2">
-                    <div className="text-xs text-muted-foreground">Your selected categories</div>
-                    {loadingSellerCategories ? (
-                      <div className="text-xs text-muted-foreground">Loading categories…</div>
-                    ) : (
-                      <div className="flex flex-wrap justify-center gap-2">
-                        {(slotId === 1 ? marketplaceSelectedCategories : serviceSelectedCategories).length > 0 ? (
-                          (slotId === 1 ? marketplaceSelectedCategories : serviceSelectedCategories).map((categoryId) => (
-                            <Badge key={categoryId} variant="secondary">
-                              {categoryLabels[categoryId] ?? categoryId}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            No categories selected for this advertise type.
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    <Button variant="link" size="sm" asChild className="h-auto p-0">
-                      <Link to="/seller/manage-categories">Manage categories</Link>
-                    </Button>
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
