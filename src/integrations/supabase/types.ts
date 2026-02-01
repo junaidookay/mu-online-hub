@@ -49,6 +49,7 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean | null
+          price_usd: number | null
           rotation_order: number | null
           slot_id: number | null
           title: string
@@ -65,6 +66,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
+          price_usd?: number | null
           rotation_order?: number | null
           slot_id?: number | null
           title: string
@@ -81,6 +83,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
+          price_usd?: number | null
           rotation_order?: number | null
           slot_id?: number | null
           title?: string

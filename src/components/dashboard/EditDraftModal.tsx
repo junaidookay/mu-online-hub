@@ -39,6 +39,7 @@ interface ServerData {
 interface AdvertisementData {
   title: string;
   description: string | null;
+  price_usd: number | null;
   website: string;
   banner_url: string | null;
 }
@@ -75,6 +76,7 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
     name: '',
     title: '',
     description: '',
+    priceUsd: '',
     website: '',
     bannerUrl: '',
     season: '',
@@ -123,7 +125,7 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
           case 'advertisement': {
             const { data: adData } = await supabase
               .from('advertisements')
-              .select('title, description, website, banner_url')
+              .select('title, description, price_usd, website, banner_url')
               .eq('id', listing.id)
               .single();
             data = adData as AdvertisementData | null;
@@ -133,6 +135,7 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
                 title: data.title || '',
                 name: data.title || '',
                 description: data.description || '',
+                priceUsd: data.price_usd != null ? String(data.price_usd) : '',
                 website: data.website || '',
                 bannerUrl: data.banner_url || '',
               });
@@ -244,6 +247,7 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
             .update({
               title: formData.title || formData.name,
               description: formData.description,
+              price_usd: formData.priceUsd ? parseFloat(formData.priceUsd) : null,
               website: formData.website,
               banner_url: formData.bannerUrl || null,
             })
@@ -337,6 +341,18 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Brief description"
                 rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="priceUsd">Price (USD)</Label>
+              <Input
+                id="priceUsd"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.priceUsd}
+                onChange={(e) => handleChange('priceUsd', e.target.value)}
+                placeholder="0.00"
               />
             </div>
             <div className="space-y-2">

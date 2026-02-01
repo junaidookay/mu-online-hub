@@ -69,6 +69,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
     name: '',
     title: '',
     description: '',
+    priceUsd: '',
     website: '',
     bannerUrl: '',
     // Server specific
@@ -225,6 +226,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
         name: '',
         title: '',
         description: '',
+        priceUsd: '',
         website: '',
         bannerUrl: '',
         season: '',
@@ -283,6 +285,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
               user_id: user.id,
               title: formData.title || formData.name,
               description: formData.description,
+              price_usd: formData.priceUsd ? parseFloat(formData.priceUsd) : null,
               website: formData.website,
               banner_url: formData.bannerUrl || null,
               ad_type: slotId === 1 ? 'marketplace' : 'services',
@@ -594,6 +597,18 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
                 onChange={(e) => handleChange('description', e.target.value)}
                 placeholder="Brief description of your product/service"
                 rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="priceUsd">Price (USD)</Label>
+              <Input
+                id="priceUsd"
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.priceUsd}
+                onChange={(e) => handleChange('priceUsd', e.target.value)}
+                placeholder="0.00"
               />
             </div>
             <div className="space-y-2">
