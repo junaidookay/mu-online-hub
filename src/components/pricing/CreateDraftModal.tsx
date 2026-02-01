@@ -253,6 +253,15 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
     typeof window !== 'undefined' &&
     typeof (HTMLInputElement.prototype as unknown as { showPicker?: () => void }).showPicker === 'function';
 
+  const tryShowPicker = (input: HTMLInputElement) => {
+    if (!pickerOnly) return;
+    try {
+      input.showPicker?.();
+    } catch {
+      return;
+    }
+  };
+
   const selectedPackage = packages.find(p => p.id === selectedPackageId);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -855,10 +864,15 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
                   id="expiresAt"
                   type="datetime-local"
                   value={formData.expiresAt}
-                  readOnly={pickerOnly}
                   className="cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
-                  onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
-                  onFocus={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                  onClick={(e) => tryShowPicker(e.currentTarget as HTMLInputElement)}
+                  onFocus={(e) => tryShowPicker(e.currentTarget as HTMLInputElement)}
+                  onKeyDown={(e) => {
+                    if (pickerOnly && e.key !== 'Tab') e.preventDefault();
+                  }}
+                  onPaste={(e) => {
+                    if (pickerOnly) e.preventDefault();
+                  }}
                   onChange={(e) => handleChange('expiresAt', e.target.value)}
                 />
               </div>
@@ -901,10 +915,15 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
                   id="expiresAt"
                   type="datetime-local"
                   value={formData.expiresAt}
-                  readOnly={pickerOnly}
                   className="cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
-                  onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
-                  onFocus={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                  onClick={(e) => tryShowPicker(e.currentTarget as HTMLInputElement)}
+                  onFocus={(e) => tryShowPicker(e.currentTarget as HTMLInputElement)}
+                  onKeyDown={(e) => {
+                    if (pickerOnly && e.key !== 'Tab') e.preventDefault();
+                  }}
+                  onPaste={(e) => {
+                    if (pickerOnly) e.preventDefault();
+                  }}
                   onChange={(e) => handleChange('expiresAt', e.target.value)}
                 />
               </div>
