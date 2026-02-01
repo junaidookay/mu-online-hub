@@ -249,6 +249,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
     return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
+  const pickerOnly =
+    typeof window !== 'undefined' &&
+    typeof (HTMLInputElement.prototype as unknown as { showPicker?: () => void }).showPicker === 'function';
+
   const selectedPackage = packages.find(p => p.id === selectedPackageId);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -421,7 +425,26 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
       onSuccess();
     } catch (error: unknown) {
       console.error('Failed to create draft:', error);
-      const message = error instanceof Error ? error.message : 'Failed to create draft.';
+      const err = error && typeof error === 'object' ? (error as Record<string, unknown>) : null;
+      const code = typeof err?.code === 'string' ? err.code : null;
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof err?.message === 'string'
+            ? err.message
+            : 'Failed to create draft.';
+      const messageLower = message.toLowerCase();
+
+      if (code === '42501' || messageLower.includes('row-level security policy')) {
+        const name = slotConfig?.name ?? 'this listing';
+        toast({
+          title: 'Not Allowed',
+          description: `You don’t have permission to create ${name}. Please contact support if you believe this is a mistake.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       toast({
         title: 'Error',
         description: message,
@@ -832,6 +855,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
                   id="expiresAt"
                   type="datetime-local"
                   value={formData.expiresAt}
+                  readOnly={pickerOnly}
+                  className="cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+                  onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                  onFocus={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
                   onChange={(e) => handleChange('expiresAt', e.target.value)}
                 />
               </div>
@@ -874,6 +901,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
                   id="expiresAt"
                   type="datetime-local"
                   value={formData.expiresAt}
+                  readOnly={pickerOnly}
+                  className="cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+                  onClick={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
+                  onFocus={(e) => (e.currentTarget as HTMLInputElement).showPicker?.()}
                   onChange={(e) => handleChange('expiresAt', e.target.value)}
                 />
               </div>
