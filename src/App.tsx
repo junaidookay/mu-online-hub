@@ -34,6 +34,10 @@ import ArcanaProjectsPage from "./pages/ArcanaProjectsPage";
 import ManageCategories from "./pages/ManageCategories";
 import TransactionHistory from "./pages/TransactionHistory";
 import CreateSlotListing from "./pages/CreateSlotListing";
+import AdDetail from "./pages/AdDetail";
+import ServerDetail from "./pages/ServerDetail";
+import UpcomingServersPage from "./pages/UpcomingServersPage";
+import Top50 from "./pages/Top50";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -76,8 +80,13 @@ const App = () => (
             <Route path="/messages" element={<Messages />} />
             <Route path="/messages/:partnerId" element={<Messages />} />
             <Route path="/servers" element={<Servers />} />
+            <Route path="/servers/upcoming" element={<UpcomingServersPage />} />
+            <Route path="/servers/:slug" element={<ServerDetail />} />
+            <Route path="/top-50" element={<Top50 />} />
             <Route path="/marketplace-ads" element={<MarketplaceAds />} />
+            <Route path="/marketplace-ads/:slug" element={<AdDetail />} />
             <Route path="/services-ads" element={<ServicesAds />} />
+            <Route path="/services-ads/:slug" element={<AdDetail />} />
             <Route path="/partners" element={<Partners />} />
             <Route path="/arcana-projects-all" element={<ArcanaProjectsPage />} />
             <Route path="/create-listing" element={<CreateSlotListing />} />

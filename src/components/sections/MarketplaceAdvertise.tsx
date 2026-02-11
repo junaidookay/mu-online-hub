@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from './SectionHeader';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
-import { normalizeExternalUrl } from '@/lib/utils';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -29,7 +29,6 @@ const MarketplaceAdvertise = () => {
         .order('rotation_order');
       
       if (data && data.length > 0) {
-        // Fair rotation - shuffle on each visit
         const shuffled = [...data].sort(() => Math.random() - 0.5);
         setAds(shuffled);
       }
@@ -47,24 +46,13 @@ const MarketplaceAdvertise = () => {
         subtitle="Websites, Server Files, Antihack etc."
       />
       <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
-        {displayAds.map((ad) => {
-          const href = normalizeExternalUrl(ad.website);
-          const CardComponent = href ? 'a' : 'div';
-          const cardProps = href
-            ? ({
-                href,
-                target: '_blank',
-                rel: 'noopener noreferrer',
-                onClick: () => trackAdClick(ad.id, href),
-              } as const)
-            : undefined;
-
-          return (
-            <CardComponent
-              key={ad.id}
-              {...cardProps}
-              className="ad-banner block relative group"
-            >
+        {displayAds.map((ad) => (
+          <Link
+            key={ad.id}
+            to={`/marketplace-ads/${(ad as any).slug || ad.id}`}
+            onClick={() => trackAdClick(ad.id, ad.website)}
+            className="ad-banner block relative group"
+          >
             <div className="flex items-center gap-2 p-1.5 bg-muted/30 rounded border border-border/30">
               {ad.vip_level && ad.vip_level !== 'none' && (
                 <span className={`vip-badge ${ad.vip_level === 'gold' ? 'vip-gold' : 'vip-diamond'} shrink-0`}>
@@ -84,13 +72,12 @@ const MarketplaceAdvertise = () => {
               </div>
               <ExternalLink size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </div>
-            </CardComponent>
-          );
-        })}
+          </Link>
+        ))}
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-          <a href="/marketplace-ads">View All Marketplace Ads</a>
+          <Link to="/marketplace-ads">View All Marketplace Ads</Link>
         </Button>
       </div>
     </div>

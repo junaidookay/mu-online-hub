@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from '@/components/sections/SectionHeader';
-import { normalizeExternalUrl } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface ServerWidget {
   id: string;
@@ -10,6 +11,7 @@ interface ServerWidget {
   season: string;
   open_date: string | null;
   website: string;
+  slug?: string | null;
 }
 
 const UpcomingServers = () => {
@@ -19,11 +21,9 @@ const UpcomingServers = () => {
 
   useEffect(() => {
     const fetchServers = async () => {
-      // Fetch servers with slot_id = 6 (Upcoming & Recent) or filter by open_date
       const { data } = await supabase
         .from('servers')
         .select('*')
-        .eq('slot_id', 6)
         .eq('is_active', true)
         .order('open_date', { ascending: true })
         .limit(10);
@@ -63,45 +63,34 @@ const UpcomingServers = () => {
     >
       <SectionHeader title="Upcoming & Recent" />
       <div className="p-2 space-y-1.5">
-        {displayServers.map((server, index) => {
-          const href = normalizeExternalUrl(server.website);
-          const CardComponent = href ? 'a' : 'div';
-          const cardProps = href
-            ? ({
-                href,
-                target: '_blank',
-                rel: 'noopener noreferrer',
-              } as const)
-            : undefined;
-
-          return (
-            <CardComponent
-              key={server.id}
-              {...cardProps}
-              className={`block p-2 rounded border transition-all ${
-                index === currentIndex 
-                  ? 'border-secondary/50 bg-secondary/10 glow-border-cyan' 
-                  : 'border-border/30 bg-muted/20 hover:border-border/50'
-              }`}
-            >
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${isUpcoming(server.open_date) ? 'bg-green-500' : 'bg-blue-500'}`} />
-                <span className="text-xs font-semibold text-foreground truncate">{server.name}</span>
+        {displayServers.map((server, index) => (
+          <Link
+            key={server.id}
+            to={`/servers/${(server as any).slug || server.id}`}
+            className={`block p-2 rounded border transition-all ${
+              index === currentIndex 
+                ? 'border-secondary/50 bg-secondary/10 glow-border-cyan' 
+                : 'border-border/30 bg-muted/20 hover:border-border/50'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isUpcoming(server.open_date) ? 'bg-green-500' : 'bg-blue-500'}`} />
+                <span className="text-xs font-semibold text-foreground">{server.name}</span>
               </div>
-
-              <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">{server.exp_rate}</span>
-                <span className="text-[10px] text-muted-foreground">{server.season}</span>
-              </div>
-
-              <div className="flex justify-end min-w-0">
-                <span className="text-[10px] text-muted-foreground whitespace-nowrap">{server.open_date || ''}</span>
-              </div>
+              <span className="text-[10px] text-muted-foreground">{server.open_date || ''}</span>
             </div>
-            </CardComponent>
-          );
-        })}
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">{server.exp_rate}</span>
+              <span className="text-[10px] text-muted-foreground">{server.season}</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+      <div className="p-2 border-t border-border/30">
+        <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+          <Link to="/servers/upcoming">View More Servers</Link>
+        </Button>
       </div>
     </div>
   );

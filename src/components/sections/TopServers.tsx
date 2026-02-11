@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from './SectionHeader';
-import { ExternalLink, Plus } from 'lucide-react';
+import { ChevronRight, Plus, Crown, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
-import { normalizeExternalUrl } from '@/lib/utils';
 
 type ServerType = Tables<'servers'>;
 
@@ -17,54 +16,62 @@ const fallbackServers = [
 
 const TopServers = () => {
   const [servers, setServers] = useState<ServerType[]>([]);
-  const { trackServerClick } = useClickTracking();
+  const [voteCounts, setVoteCounts] = useState<Record<string, number>>({});
+
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
   useEffect(() => {
     const fetchServers = async () => {
       const { data } = await supabase
         .from('servers')
         .select('*')
-        .eq('slot_id', 3)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(50);
       
       if (data && data.length > 0) {
-        // Fair rotation - shuffle on each visit
-        const shuffled = [...data].sort(() => Math.random() - 0.5);
-        setServers(shuffled);
+        setServers(data);
+      }
+    };
+    const fetchVotes = async () => {
+      const { data } = await supabase
+        .from('server_votes')
+        .select('server_id')
+        .eq('vote_month', currentMonth)
+        .eq('vote_year', currentYear);
+      if (data) {
+        const counts: Record<string, number> = {};
+        data.forEach(v => { counts[v.server_id] = (counts[v.server_id] || 0) + 1; });
+        setVoteCounts(counts);
       }
     };
     fetchServers();
+    fetchVotes();
   }, []);
 
-  const allServers = servers.length > 0 ? servers : fallbackServers;
-  const displayServers = allServers.slice(0, 10);
+  const rankedServers = useMemo(() => {
+    const allServers = servers.length > 0 ? servers : fallbackServers;
+    return [...allServers]
+      .map(s => ({ ...s, vote_count: voteCounts[s.id] || 0 }))
+      .sort((a, b) => b.vote_count - a.vote_count)
+      .slice(0, 5);
+  }, [servers, voteCounts]);
 
   return (
     <div className="glass-card overflow-hidden flex flex-col">
       <SectionHeader 
         title="Top 50 MU Online Servers" 
-        badge={<span className="text-xs text-secondary">{allServers.length} active</span>}
+        badge={<span className="text-xs text-secondary">{servers.length || 0} active</span>}
       />
       <div className="flex-1 p-2 space-y-2 overflow-y-auto scrollbar-thin">
-        {displayServers.map((server, index) => {
-          const href = normalizeExternalUrl(server.website);
-          const CardComponent = href ? 'a' : 'div';
-          const cardProps = href
-            ? ({
-                href,
-                target: '_blank',
-                rel: 'noopener noreferrer',
-                onClick: () => 'id' in server && trackServerClick(server.id, href),
-              } as const)
-            : undefined;
-
-          return (
-            <div key={server.id}>
-              <CardComponent
-                {...cardProps}
-                className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
-              >
+        {rankedServers.map((server, index) => (
+          <div key={server.id}>
+            <Link
+              to={`/servers/${(server as any).slug || server.id}`}
+              className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
+            >
               <div className="relative">
                 {server.banner_url ? (
                   <img 
@@ -78,36 +85,37 @@ const TopServers = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/50 to-transparent" />
                 <div className="absolute inset-0 p-2 flex flex-col justify-between">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-secondary">#{index + 1}</span>
                       <h4 className="font-display text-sm font-bold text-primary">
-                        {server.name} {server.season} {server.part} - {server.exp_rate}
+                        {server.name}
                       </h4>
-                      <p className="text-[10px] text-muted-foreground">
-                        FULL {server.season} {server.part} - EXP {server.exp_rate}
-                      </p>
+                      {(server as any).is_premium && <Crown className="w-3 h-3 text-yellow-400" />}
                     </div>
-                    <ExternalLink size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-secondary font-bold">{(server as any).vote_count || 0}</span>
+                      <Star className="w-3 h-3 text-secondary" />
+                      <ChevronRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </div>
-                  <p className="text-[9px] text-muted-foreground/70 truncate">
-                    {server.features?.join(' - ') || 'MU Online Server'}
+                  <p className="text-[10px] text-muted-foreground">
+                    {server.season} {server.part} - {server.exp_rate}
                   </p>
                 </div>
               </div>
-              </CardComponent>
-            {/* Upgrade CTA after each server */}
-            {index < displayServers.length - 1 && (
+            </Link>
+            {index < rankedServers.length - 1 && (
               <button className="w-full py-1 mt-1 flex items-center justify-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors">
                 <Plus size={10} />
                 <span>Upgrade to Premium</span>
               </button>
             )}
-            </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-          <a href="/servers">View All Servers</a>
+          <Link to="/top-50">View Top 50 Rankings</Link>
         </Button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
@@ -7,9 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
-import { useNavigate } from 'react-router-dom';
-import { getSlotRedirectUrl } from '@/lib/slotConfig';
-import { normalizeExternalUrl } from '@/lib/utils';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -23,7 +21,6 @@ const MarketplaceAds = () => {
   const [ads, setAds] = useState<Advertisement[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const { trackAdClick } = useClickTracking();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchAds = async () => {
@@ -71,31 +68,20 @@ const MarketplaceAds = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="secondary" onClick={() => navigate(getSlotRedirectUrl(1))}>
+            <Button variant="secondary">
               <Plus size={18} className="mr-2" />
               Place Your Ad
             </Button>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredAds.map((ad) => {
-              const href = normalizeExternalUrl(ad.website);
-              const CardComponent = href ? 'a' : 'div';
-              const cardProps = href
-                ? ({
-                    href,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    onClick: () => trackAdClick(ad.id, href),
-                  } as const)
-                : undefined;
-
-              return (
-                <CardComponent
-                  key={ad.id}
-                  {...cardProps}
-                  className="ad-banner block relative group"
-                >
+            {filteredAds.map((ad) => (
+              <Link
+                key={ad.id}
+                to={`/marketplace-ads/${(ad as any).slug || ad.id}`}
+                onClick={() => trackAdClick(ad.id, ad.website)}
+                className="ad-banner block relative group"
+              >
                 <div className="p-4 bg-muted/30 rounded-lg border border-border/30 hover:border-primary/50 transition-colors">
                   {ad.vip_level && ad.vip_level !== 'none' && (
                     <span className={`vip-badge ${ad.vip_level === 'gold' ? 'vip-gold' : 'vip-diamond'} mb-2 inline-block`}>
@@ -117,9 +103,8 @@ const MarketplaceAds = () => {
                     <ExternalLink size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                 </div>
-                </CardComponent>
-              );
-            })}
+              </Link>
+            ))}
           </div>
 
           {filteredAds.length === 0 && (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
@@ -7,9 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
-import { useNavigate } from 'react-router-dom';
-import { getSlotRedirectUrl } from '@/lib/slotConfig';
-import { normalizeExternalUrl } from '@/lib/utils';
 
 type ServerType = Tables<'servers'>;
 
@@ -23,14 +21,12 @@ const Servers = () => {
   const [servers, setServers] = useState<ServerType[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const { trackServerClick } = useClickTracking();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchServers = async () => {
       const { data } = await supabase
         .from('servers')
         .select('*')
-        .eq('slot_id', 3)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
       
@@ -71,31 +67,19 @@ const Servers = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="secondary" onClick={() => navigate(getSlotRedirectUrl(3))}>
+            <Button variant="secondary">
               <Plus size={18} className="mr-2" />
               Add Your Server
             </Button>
           </div>
 
           <div className="space-y-3">
-            {filteredServers.map((server) => {
-              const href = normalizeExternalUrl(server.website);
-              const CardComponent = href ? 'a' : 'div';
-              const cardProps = href
-                ? ({
-                    href,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    onClick: () => 'id' in server && trackServerClick(server.id, href),
-                  } as const)
-                : undefined;
-
-              return (
-                <CardComponent
-                  key={server.id}
-                  {...cardProps}
-                  className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
-                >
+            {filteredServers.map((server) => (
+              <Link
+                key={server.id}
+                to={`/servers/${(server as any).slug || server.id}`}
+                className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
+              >
                 <div className="relative">
                   {server.banner_url ? (
                     <img 
@@ -117,16 +101,14 @@ const Servers = () => {
                           FULL {server.season} {server.part} - EXP {server.exp_rate}
                         </p>
                       </div>
-                      <ExternalLink size={18} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <p className="text-xs text-muted-foreground/70">
                       {server.features?.join(' - ') || 'MU Online Server'}
                     </p>
                   </div>
                 </div>
-                </CardComponent>
-              );
-            })}
+              </Link>
+            ))}
           </div>
 
           {filteredServers.length === 0 && (

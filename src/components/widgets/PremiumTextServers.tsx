@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import SectionHeader from '@/components/sections/SectionHeader';
 import { normalizeExternalUrl } from '@/lib/utils';

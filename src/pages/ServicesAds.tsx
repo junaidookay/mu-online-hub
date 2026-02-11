@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
@@ -7,9 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
-import { useNavigate } from 'react-router-dom';
-import { getSlotRedirectUrl } from '@/lib/slotConfig';
-import { normalizeExternalUrl } from '@/lib/utils';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -23,7 +21,6 @@ const ServicesAds = () => {
   const [services, setServices] = useState<Advertisement[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const { trackAdClick } = useClickTracking();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -71,31 +68,20 @@ const ServicesAds = () => {
                 className="pl-10"
               />
             </div>
-            <Button variant="secondary" onClick={() => navigate(getSlotRedirectUrl(2))}>
+            <Button variant="secondary">
               <Plus size={18} className="mr-2" />
               Place Your Ad
             </Button>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredServices.map((service) => {
-              const href = normalizeExternalUrl(service.website);
-              const CardComponent = href ? 'a' : 'div';
-              const cardProps = href
-                ? ({
-                    href,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    onClick: () => trackAdClick(service.id, href),
-                  } as const)
-                : undefined;
-
-              return (
-                <CardComponent
-                  key={service.id}
-                  {...cardProps}
-                  className="ad-banner block relative group"
-                >
+            {filteredServices.map((service) => (
+              <Link
+                key={service.id}
+                to={`/services-ads/${(service as any).slug || service.id}`}
+                onClick={() => trackAdClick(service.id, service.website)}
+                className="ad-banner block relative group"
+              >
                 <div className="p-4 bg-muted/30 rounded-lg border border-border/30 hover:border-secondary/50 transition-colors">
                   {service.vip_level && service.vip_level !== 'none' && (
                     <span className={`vip-badge ${service.vip_level === 'gold' ? 'vip-gold' : 'vip-diamond'} mb-2 inline-block`}>
@@ -117,9 +103,8 @@ const ServicesAds = () => {
                     <ExternalLink size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                   </div>
                 </div>
-                </CardComponent>
-              );
-            })}
+              </Link>
+            ))}
           </div>
 
           {filteredServices.length === 0 && (
