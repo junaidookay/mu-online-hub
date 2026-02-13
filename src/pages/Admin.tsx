@@ -28,6 +28,7 @@ import { PaymentAnalytics } from '@/components/admin/PaymentAnalytics';
 import { StripeSettings } from '@/components/admin/StripeSettings';
 import { PayPalSettings } from '@/components/admin/PayPalSettings';
 import { AdminSlotManager } from '@/components/admin/AdminSlotManager';
+import { VotingAdmin } from '@/components/admin/VotingAdmin';
 import type { Tables } from '@/integrations/supabase/types';
 
 type PremiumBanner = Tables<'premium_banners'>;
@@ -280,33 +281,37 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="slots" className="w-full">
-          <TabsList className="grid w-full grid-cols-7 mb-6">
-            <TabsTrigger value="slots" className="gap-2">
-              <Server size={16} />
+          <TabsList className="grid w-full grid-cols-8 mb-6">
+            <TabsTrigger value="slots" className="gap-1 text-xs">
+              <Server size={14} />
               Slots
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2">
-              <BarChart3 size={16} />
+            <TabsTrigger value="voting" className="gap-1 text-xs">
+              <BarChart3 size={14} />
+              Voting
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-1 text-xs">
+              <BarChart3 size={14} />
               Analytics
             </TabsTrigger>
-            <TabsTrigger value="stripe" className="gap-2">
-              <CreditCard size={16} />
+            <TabsTrigger value="stripe" className="gap-1 text-xs">
+              <CreditCard size={14} />
               Payments
             </TabsTrigger>
-            <TabsTrigger value="banners" className="gap-2">
-              <Image size={16} />
+            <TabsTrigger value="banners" className="gap-1 text-xs">
+              <Image size={14} />
               Banners
             </TabsTrigger>
-            <TabsTrigger value="partners" className="gap-2">
-              <Users size={16} />
+            <TabsTrigger value="partners" className="gap-1 text-xs">
+              <Users size={14} />
               Partners
             </TabsTrigger>
-            <TabsTrigger value="projects" className="gap-2">
-              <Server size={16} />
+            <TabsTrigger value="projects" className="gap-1 text-xs">
+              <Server size={14} />
               Projects
             </TabsTrigger>
-            <TabsTrigger value="promos" className="gap-2">
-              <Megaphone size={16} />
+            <TabsTrigger value="promos" className="gap-1 text-xs">
+              <Megaphone size={14} />
               Promos
             </TabsTrigger>
           </TabsList>
@@ -314,6 +319,11 @@ const Admin = () => {
           {/* Slot Manager Tab */}
           <TabsContent value="slots" className="space-y-6">
             <AdminSlotManager />
+          </TabsContent>
+
+          {/* Voting Admin Tab */}
+          <TabsContent value="voting" className="space-y-6">
+            <VotingAdmin />
           </TabsContent>
 
           {/* Analytics Tab */}

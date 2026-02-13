@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Calendar, User, Clock, Globe, Loader2, Crown } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Calendar, User, Clock, Globe, Loader2, Crown, Image as ImageIcon } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import ContactSellerButton from '@/components/messaging/ContactSellerButton';
 import { useAuth } from '@/contexts/AuthContext';
+import ImageLightbox from '@/components/gallery/ImageLightbox';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -25,6 +26,8 @@ const AdDetail = () => {
   const [seller, setSeller] = useState<SellerProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   useEffect(() => {
     if (slug) fetchAd();
@@ -32,16 +35,12 @@ const AdDetail = () => {
 
   const fetchAd = async () => {
     setIsLoading(true);
-    
-    // Try slug first, then id
     let query = supabase.from('advertisements').select('*').eq('slug', slug!).maybeSingle();
     let { data } = await query;
-    
     if (!data) {
       const { data: byId } = await supabase.from('advertisements').select('*').eq('id', slug!).maybeSingle();
       data = byId;
     }
-
     if (data) {
       setAd(data);
       const { data: profile } = await supabase
@@ -59,6 +58,9 @@ const AdDetail = () => {
   const adType = ad?.ad_type || 'marketplace';
   const backPath = adType === 'services' ? '/services-ads' : '/marketplace-ads';
   const backLabel = adType === 'services' ? 'Services Ads' : 'Marketplace Ads';
+
+  // Build gallery from banner_url (future: extend with gallery_urls column)
+  const galleryImages = ad?.banner_url ? [ad.banner_url] : [];
 
   if (isLoading) {
     return (
@@ -111,6 +113,14 @@ const AdDetail = () => {
       />
       <Header />
 
+      {lightboxOpen && galleryImages.length > 0 && (
+        <ImageLightbox
+          images={galleryImages}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
+
       <main className="container py-8">
         <Button variant="ghost" asChild className="mb-6 gap-2">
           <Link to={backPath}>
@@ -122,10 +132,35 @@ const AdDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Banner */}
-            {ad.banner_url ? (
+            {/* Banner / Gallery */}
+            {galleryImages.length > 0 ? (
               <div className={`glass-card overflow-hidden ${isPremium ? 'glow-border-gold' : ''}`}>
-                <img src={ad.banner_url} alt={ad.title} className="w-full aspect-video object-cover" />
+                <div
+                  className="cursor-pointer relative group"
+                  onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}
+                >
+                  <img src={galleryImages[0]} alt={ad.title} className="w-full aspect-video object-cover" />
+                  <div className="absolute inset-0 bg-background/0 group-hover:bg-background/20 transition-colors flex items-center justify-center">
+                    <ImageIcon className="w-8 h-8 text-foreground opacity-0 group-hover:opacity-80 transition-opacity" />
+                  </div>
+                </div>
+
+                {/* Thumbnail gallery row */}
+                {galleryImages.length > 1 && (
+                  <div className="p-2 flex gap-2 overflow-x-auto scrollbar-thin">
+                    {galleryImages.map((img, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setLightboxIndex(i); setLightboxOpen(true); }}
+                        className={`shrink-0 w-20 h-14 rounded overflow-hidden border-2 transition-colors ${
+                          i === 0 ? 'border-primary' : 'border-border/30 hover:border-primary/50'
+                        }`}
+                      >
+                        <img src={img} alt="" className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="glass-card aspect-video flex items-center justify-center bg-muted/20">
@@ -143,14 +178,10 @@ const AdDetail = () => {
                     {ad.vip_level?.toUpperCase()} Premium
                   </Badge>
                 )}
-                {ad.category && (
-                  <Badge variant="secondary">{ad.category}</Badge>
-                )}
+                {ad.category && <Badge variant="secondary">{ad.category}</Badge>}
               </div>
 
-              <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-4">
-                {ad.title}
-              </h1>
+              <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-4">{ad.title}</h1>
 
               {ad.description && (
                 <div className="prose prose-invert max-w-none">
@@ -173,7 +204,6 @@ const AdDetail = () => {
 
           {/* Sidebar */}
           <div className="space-y-4">
-            {/* Actions */}
             <div className={`glass-card p-6 ${isPremium ? 'glow-border-gold' : ''}`}>
               {ad.price_usd && (
                 <div className="text-center mb-6">
@@ -181,7 +211,6 @@ const AdDetail = () => {
                   <p className="font-display text-4xl font-bold text-primary">${ad.price_usd}</p>
                 </div>
               )}
-
               <div className="space-y-3">
                 <Button className="w-full btn-fantasy-primary gap-2" asChild>
                   <a href={`https://${ad.website}`} target="_blank" rel="noopener noreferrer">
@@ -189,45 +218,36 @@ const AdDetail = () => {
                     Visit Website
                   </a>
                 </Button>
-
                 {user && user.id !== ad.user_id && (
-                  <ContactSellerButton
-                    sellerId={ad.user_id}
-                    listingTitle={ad.title}
-                    className="w-full"
-                  />
+                  <ContactSellerButton sellerId={ad.user_id} listingTitle={ad.title} className="w-full" />
                 )}
               </div>
             </div>
 
-            {/* Seller Info */}
             <div className="glass-card p-6">
               <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
                 <User className="w-4 h-4" />
                 Seller Information
               </h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  {seller?.avatar_url ? (
-                    <img src={seller.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                      <User className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-medium">{seller?.display_name || 'Anonymous'}</p>
-                    {seller?.created_at && (
-                      <p className="text-xs text-muted-foreground">
-                        Joined {new Date(seller.created_at).toLocaleDateString()}
-                      </p>
-                    )}
+              <div className="flex items-center gap-3">
+                {seller?.avatar_url ? (
+                  <img src={seller.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <User className="w-5 h-5 text-muted-foreground" />
                   </div>
+                )}
+                <div>
+                  <p className="font-medium">{seller?.display_name || 'Anonymous'}</p>
+                  {seller?.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Joined {new Date(seller.created_at).toLocaleDateString()}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Expiry info */}
             {ad.expires_at && (
               <div className="glass-card p-4 border-l-4 border-yellow-500/50">
                 <p className="text-xs text-muted-foreground">
