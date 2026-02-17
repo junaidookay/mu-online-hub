@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Calendar, User, Clock, Globe, Loader2, Crown, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Calendar, User, Clock, Globe, Loader2, Crown, Image as ImageIcon, MessageCircle } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import type { Tables } from '@/integrations/supabase/types';
 import ContactSellerButton from '@/components/messaging/ContactSellerButton';
 import { useAuth } from '@/contexts/AuthContext';
 import ImageLightbox from '@/components/gallery/ImageLightbox';
+import { toast } from 'sonner';
 
 type Advertisement = Tables<'advertisements'>;
 
@@ -90,6 +91,8 @@ const AdDetail = () => {
   const isExpired = ad.expires_at && new Date(ad.expires_at) < new Date();
   const isInactive = !ad.is_active;
   const isPremium = ad.vip_level && ad.vip_level !== 'none';
+  const sellerId = ad.user_id;
+  const isValidSellerId = typeof sellerId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sellerId);
 
   if (isExpired || isInactive) {
     return (
@@ -218,8 +221,19 @@ const AdDetail = () => {
                     Visit Website
                   </a>
                 </Button>
-                {ad.user_id && user?.id !== ad.user_id && (
-                  <ContactSellerButton sellerId={ad.user_id} listingTitle={ad.title} className="w-full" />
+                {user?.id !== sellerId && (
+                  isValidSellerId ? (
+                    <ContactSellerButton sellerId={sellerId} listingTitle={ad.title} className="w-full" />
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => toast.error('Seller messaging is not available for this ad')}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Contact Seller
+                    </Button>
+                  )
                 )}
               </div>
             </div>
