@@ -8,6 +8,9 @@ import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Advertisement = Tables<'advertisements'>;
+type AdvertisementExtras = {
+  slug?: string | null;
+};
 
 const fallbackAds = [
   { id: '1', title: 'Arcana GRAND OPENING', description: 'xp rates 9000 x', website: 'arcana-files.com', banner_url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=268&h=60&fit=crop', vip_level: 'gold' as const },
@@ -49,7 +52,7 @@ const MarketplaceAdvertise = () => {
         {displayAds.map((ad) => (
           <Link
             key={ad.id}
-            to={`/marketplace-ads/${(ad as any).slug || ad.id}`}
+            to={`/marketplace-ads/${((ad as unknown as Advertisement & AdvertisementExtras).slug || ad.id)}`}
             onClick={() => trackAdClick(ad.id, ad.website)}
             className="ad-banner block relative group"
           >

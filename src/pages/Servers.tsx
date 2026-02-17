@@ -10,6 +10,9 @@ import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ServerType = Tables<'servers'>;
+type ServerExtras = {
+  slug?: string | null;
+};
 
 const fallbackServers = [
   { id: '1', name: 'Asteria MU', season: 'SEASON 20', part: 'PART 2-3', exp_rate: '99999x', features: ['LONG-TERM SERVER', 'NEW 5TH QUEST/CLASSES'], banner_url: 'https://images.unsplash.com/photo-1614854262318-831574f15f1f?w=468&h=60&fit=crop', website: 'asteriamu.com' },
@@ -77,7 +80,7 @@ const Servers = () => {
             {filteredServers.map((server) => (
               <Link
                 key={server.id}
-                to={`/servers/${(server as any).slug || server.id}`}
+                to={`/servers/${((server as unknown as ServerType & ServerExtras).slug || server.id)}`}
                 className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
               >
                 <div className="relative">

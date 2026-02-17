@@ -35,7 +35,7 @@ const AdDetail = () => {
 
   const fetchAd = async () => {
     setIsLoading(true);
-    let query = supabase.from('advertisements').select('*').eq('slug', slug!).maybeSingle();
+    const query = supabase.from('advertisements').select('*').eq('slug', slug!).maybeSingle();
     let { data } = await query;
     if (!data) {
       const { data: byId } = await supabase.from('advertisements').select('*').eq('id', slug!).maybeSingle();

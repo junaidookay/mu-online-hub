@@ -7,6 +7,17 @@ import { Button } from '@/components/ui/button';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ServerType = Tables<'servers'>;
+type RankedServer = {
+  id: string;
+  name: string;
+  season: string;
+  part: string;
+  exp_rate: string;
+  banner_url?: string | null;
+  slug?: string | null;
+  is_premium?: boolean | null;
+  vote_count: number;
+};
 
 const fallbackServers = [
   { id: '1', name: 'Asteria MU', season: 'SEASON 20', part: 'PART 2-3', exp_rate: '99999x', features: ['LONG-TERM SERVER', 'NEW 5TH QUEST/CLASSES'], banner_url: 'https://images.unsplash.com/photo-1614854262318-831574f15f1f?w=468&h=60&fit=crop', website: 'asteriamu.com' },
@@ -51,10 +62,13 @@ const TopServers = () => {
     fetchVotes();
   }, []);
 
-  const rankedServers = useMemo(() => {
+  const rankedServers = useMemo<RankedServer[]>(() => {
     const allServers = servers.length > 0 ? servers : fallbackServers;
     return [...allServers]
-      .map(s => ({ ...s, vote_count: voteCounts[s.id] || 0 }))
+      .map((s) => {
+        const base = s as unknown as Omit<RankedServer, 'vote_count'>;
+        return { ...base, vote_count: voteCounts[base.id] || 0 };
+      })
       .sort((a, b) => b.vote_count - a.vote_count)
       .slice(0, 5);
   }, [servers, voteCounts]);
@@ -69,7 +83,7 @@ const TopServers = () => {
         {rankedServers.map((server, index) => (
           <div key={server.id}>
             <Link
-              to={`/servers/${(server as any).slug || server.id}`}
+              to={`/servers/${server.slug || server.id}`}
               className="server-item block rounded-lg overflow-hidden border border-border/30 bg-muted/20 group"
             >
               <div className="relative">
@@ -90,10 +104,10 @@ const TopServers = () => {
                       <h4 className="font-display text-sm font-bold text-primary">
                         {server.name}
                       </h4>
-                      {(server as any).is_premium && <Crown className="w-3 h-3 text-yellow-400" />}
+                      {server.is_premium && <Crown className="w-3 h-3 text-yellow-400" />}
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-[10px] text-secondary font-bold">{(server as any).vote_count || 0}</span>
+                      <span className="text-[10px] text-secondary font-bold">{server.vote_count || 0}</span>
                       <Star className="w-3 h-3 text-secondary" />
                       <ChevronRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>

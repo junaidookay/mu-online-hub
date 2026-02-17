@@ -66,7 +66,7 @@ const UpcomingServers = () => {
         {displayServers.map((server, index) => (
           <Link
             key={server.id}
-            to={`/servers/${(server as any).slug || server.id}`}
+            to={`/servers/${server.slug || server.id}`}
             className={`block p-2 rounded border transition-all ${
               index === currentIndex 
                 ? 'border-secondary/50 bg-secondary/10 glow-border-cyan' 

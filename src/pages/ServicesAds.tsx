@@ -10,6 +10,9 @@ import { useClickTracking } from '@/hooks/useClickTracking';
 import type { Tables } from '@/integrations/supabase/types';
 
 type Advertisement = Tables<'advertisements'>;
+type AdvertisementExtras = {
+  slug?: string | null;
+};
 
 const fallbackServices = [
   { id: '1', title: 'Pro Video Maker', description: 'Trailers & Intros', website: 'pro-video.net', banner_url: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=268&h=60&fit=crop', vip_level: 'gold' as const },
@@ -78,7 +81,7 @@ const ServicesAds = () => {
             {filteredServices.map((service) => (
               <Link
                 key={service.id}
-                to={`/services-ads/${(service as any).slug || service.id}`}
+                to={`/services-ads/${((service as unknown as Advertisement & AdvertisementExtras).slug || service.id)}`}
                 onClick={() => trackAdClick(service.id, service.website)}
                 className="ad-banner block relative group"
               >

@@ -11,6 +11,13 @@ import { useToast } from '@/hooks/use-toast';
 import type { Tables } from '@/integrations/supabase/types';
 
 type ServerType = Tables<'servers'>;
+type ServerExtras = {
+  slug?: string | null;
+  long_description?: string | null;
+  logo_url?: string | null;
+  voting_enabled?: boolean | null;
+  discord_link?: string | null;
+};
 
 interface OwnerProfile {
   display_name: string | null;
@@ -162,12 +169,13 @@ const ServerDetail = () => {
 
   const isUpcoming = server.open_date && new Date(server.open_date) > now;
   const serverStatus = server.is_premium ? 'Premium' : isUpcoming ? 'Upcoming' : 'Live';
+  const serverExtra = server as unknown as ServerType & ServerExtras;
 
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
         title={`${server.name} - ${server.season} ${server.part} | MU Online Server`}
-        description={`${server.name} MU Online Server - ${server.season} ${server.part}, EXP Rate: ${server.exp_rate}. ${(server as any).long_description || server.features?.join(', ') || ''}`}
+        description={`${server.name} MU Online Server - ${server.season} ${server.part}, EXP Rate: ${server.exp_rate}. ${serverExtra.long_description || server.features?.join(', ') || ''}`}
       />
       <Header />
 
@@ -184,8 +192,8 @@ const ServerDetail = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent" />
               <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
                 <div className="flex items-center gap-3">
-                  {(server as any).logo_url && (
-                    <img src={(server as any).logo_url} alt="" className="w-16 h-16 rounded-lg border-2 border-border object-cover" />
+                  {serverExtra.logo_url && (
+                    <img src={serverExtra.logo_url} alt="" className="w-16 h-16 rounded-lg border-2 border-border object-cover" />
                   )}
                   <div>
                     <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">{server.name}</h1>
@@ -203,8 +211,8 @@ const ServerDetail = () => {
           ) : (
             <div className="p-6 bg-gradient-to-r from-primary/10 to-secondary/10">
               <div className="flex items-center gap-3">
-                {(server as any).logo_url && (
-                  <img src={(server as any).logo_url} alt="" className="w-16 h-16 rounded-lg border-2 border-border object-cover" />
+                {serverExtra.logo_url && (
+                  <img src={serverExtra.logo_url} alt="" className="w-16 h-16 rounded-lg border-2 border-border object-cover" />
                 )}
                 <div>
                   <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground">{server.name}</h1>
@@ -242,8 +250,8 @@ const ServerDetail = () => {
             {/* Description */}
             <div className="glass-card p-6">
               <h2 className="font-display text-lg font-bold mb-4">About This Server</h2>
-              {(server as any).long_description ? (
-                <p className="text-muted-foreground whitespace-pre-wrap">{(server as any).long_description}</p>
+              {serverExtra.long_description ? (
+                <p className="text-muted-foreground whitespace-pre-wrap">{serverExtra.long_description}</p>
               ) : server.features && server.features.length > 0 ? (
                 <div className="space-y-2">
                   {server.features.map((f, i) => (
@@ -259,7 +267,7 @@ const ServerDetail = () => {
             </div>
 
             {/* Features */}
-            {server.features && server.features.length > 0 && (server as any).long_description && (
+            {server.features && server.features.length > 0 && serverExtra.long_description && (
               <div className="glass-card p-6">
                 <h2 className="font-display text-lg font-bold mb-4">Features</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -283,7 +291,7 @@ const ServerDetail = () => {
                 <p className="font-display text-4xl font-bold text-secondary">{voteCount}</p>
               </div>
               <div className="space-y-3">
-                {(server as any).voting_enabled !== false && (
+                {serverExtra.voting_enabled !== false && (
                   <Button
                     className={`w-full gap-2 ${hasVoted ? 'btn-fantasy-outline' : 'btn-fantasy-primary'}`}
                     onClick={handleVote}
@@ -299,9 +307,9 @@ const ServerDetail = () => {
                     Visit Website
                   </a>
                 </Button>
-                {(server as any).discord_link && (
+                {serverExtra.discord_link && (
                   <Button variant="outline" className="w-full gap-2" asChild>
-                    <a href={(server as any).discord_link} target="_blank" rel="noopener noreferrer">
+                    <a href={serverExtra.discord_link} target="_blank" rel="noopener noreferrer">
                       <MessageCircle className="w-4 h-4" />
                       Join Discord
                     </a>
