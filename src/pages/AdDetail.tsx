@@ -218,7 +218,7 @@ const AdDetail = () => {
                     Visit Website
                   </a>
                 </Button>
-                {user && user.id !== ad.user_id && (
+                {ad.user_id && user?.id !== ad.user_id && (
                   <ContactSellerButton sellerId={ad.user_id} listingTitle={ad.title} className="w-full" />
                 )}
               </div>
