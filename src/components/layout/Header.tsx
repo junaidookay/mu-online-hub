@@ -131,6 +131,11 @@ const Header = () => {
             </NavigationMenuList>
           </NavigationMenu>
 
+          <Button variant="ghost" size="sm" className="text-sm" onClick={() => navigate('/top-50')}>
+            <Crown size={14} className="mr-1" />
+            Top Servers
+          </Button>
+
           <Button variant="ghost" size="sm" className="text-sm" onClick={() => navigate('/pricing')}>
             <Crown size={14} className="mr-1" />
             Premium
@@ -294,6 +299,11 @@ const Header = () => {
             ))}
           </div>
           
+          <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/top-50'); setIsMenuOpen(false); }}>
+            <Crown size={16} className="mr-2" />
+            Top Servers
+          </Button>
+
           <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/pricing'); setIsMenuOpen(false); }}>
             <Crown size={16} className="mr-2" />
             Premium

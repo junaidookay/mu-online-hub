@@ -129,7 +129,7 @@ const TopServers = () => {
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-          <Link to="/top-50">View Top 50 Rankings</Link>
+          <Link to="/servers">View All Servers</Link>
         </Button>
       </div>
     </div>
