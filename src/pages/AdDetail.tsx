@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, Calendar, User, Clock, Globe, Loader2, Crown, Image as ImageIcon, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Loader2, Image as ImageIcon, Tag } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
-import ContactSellerButton from '@/components/messaging/ContactSellerButton';
 import { useAuth } from '@/contexts/AuthContext';
 import ImageLightbox from '@/components/gallery/ImageLightbox';
-import { toast } from 'sonner';
+import VideoEmbed from '@/components/ad/VideoEmbed';
+import SellerInfoPanel from '@/components/ad/SellerInfoPanel';
+import DOMPurify from 'dompurify';
+import { categoryLabels } from '@/lib/categories';
+import type { Tables } from '@/integrations/supabase/types';
 
-type Advertisement = Tables<'advertisements'>;
+type AdvertisementType = Tables<'advertisements'>;
 
 interface SellerProfile {
   display_name: string | null;
@@ -23,8 +25,9 @@ interface SellerProfile {
 const AdDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const { user } = useAuth();
-  const [ad, setAd] = useState<Advertisement | null>(null);
+  const [ad, setAd] = useState<AdvertisementType | null>(null);
   const [seller, setSeller] = useState<SellerProfile | null>(null);
+  const [sellerListingsCount, setSellerListingsCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -44,12 +47,12 @@ const AdDetail = () => {
     }
     if (data) {
       setAd(data);
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name, avatar_url, created_at')
-        .eq('user_id', data.user_id)
-        .maybeSingle();
-      setSeller(profile);
+      const [profileRes, countRes] = await Promise.all([
+        supabase.from('profiles').select('display_name, avatar_url, created_at').eq('user_id', data.user_id).maybeSingle(),
+        supabase.from('advertisements').select('id', { count: 'exact', head: true }).eq('user_id', data.user_id).eq('is_active', true),
+      ]);
+      setSeller(profileRes.data);
+      setSellerListingsCount(countRes.count || 0);
     } else {
       setNotFound(true);
     }
@@ -59,9 +62,8 @@ const AdDetail = () => {
   const adType = ad?.ad_type || 'marketplace';
   const backPath = adType === 'services' ? '/services-ads' : '/marketplace-ads';
   const backLabel = adType === 'services' ? 'Services Ads' : 'Marketplace Ads';
-
-  // Build gallery from banner_url (future: extend with gallery_urls column)
   const galleryImages = ad?.banner_url ? [ad.banner_url] : [];
+  const isPremium = ad?.vip_level && ad.vip_level !== 'none';
 
   if (isLoading) {
     return (
@@ -90,9 +92,6 @@ const AdDetail = () => {
 
   const isExpired = ad.expires_at && new Date(ad.expires_at) < new Date();
   const isInactive = !ad.is_active;
-  const isPremium = ad.vip_level && ad.vip_level !== 'none';
-  const sellerId = ad.user_id;
-  const isValidSellerId = typeof sellerId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sellerId);
 
   if (isExpired || isInactive) {
     return (
@@ -108,11 +107,17 @@ const AdDetail = () => {
     );
   }
 
+  const metaDescription = ad.short_description || ad.description || `${ad.title} on MU Online Hub`;
+  const sanitizedFullDescription = ad.full_description
+    ? DOMPurify.sanitize(ad.full_description)
+    : null;
+  const tags: string[] = ad.tags || [];
+
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
         title={`${ad.title} - MU Online ${adType === 'services' ? 'Services' : 'Marketplace'}`}
-        description={ad.description || `${ad.title} on MU Online Hub`}
+        description={metaDescription}
       />
       <Header />
 
@@ -135,20 +140,25 @@ const AdDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Banner / Gallery */}
+            {/* Banner - Original Aspect Ratio */}
             {galleryImages.length > 0 ? (
               <div className={`glass-card overflow-hidden ${isPremium ? 'glow-border-gold' : ''}`}>
                 <div
                   className="cursor-pointer relative group"
                   onClick={() => { setLightboxIndex(0); setLightboxOpen(true); }}
                 >
-                  <img src={galleryImages[0]} alt={ad.title} className="w-full aspect-video object-cover" />
+                  <img
+                    src={galleryImages[0]}
+                    alt={ad.title}
+                    className="w-full h-auto object-contain"
+                    loading="lazy"
+                    style={{ maxHeight: '500px' }}
+                  />
                   <div className="absolute inset-0 bg-background/0 group-hover:bg-background/20 transition-colors flex items-center justify-center">
                     <ImageIcon className="w-8 h-8 text-foreground opacity-0 group-hover:opacity-80 transition-opacity" />
                   </div>
                 </div>
 
-                {/* Thumbnail gallery row */}
                 {galleryImages.length > 1 && (
                   <div className="p-2 flex gap-2 overflow-x-auto scrollbar-thin">
                     {galleryImages.map((img, i) => (
@@ -165,34 +175,61 @@ const AdDetail = () => {
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="glass-card aspect-video flex items-center justify-center bg-muted/20">
-                <Globe className="w-24 h-24 text-muted-foreground" />
-              </div>
-            )}
+            ) : null}
 
-            {/* Details */}
+            {/* Title + Badges */}
             <div className="glass-card p-6">
               <div className="flex items-center gap-3 mb-4 flex-wrap">
                 <Badge variant="outline">{adType === 'services' ? 'Service' : 'Marketplace'}</Badge>
                 {isPremium && (
                   <Badge className={ad.vip_level === 'diamond' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-yellow-500/20 text-yellow-400'}>
-                    <Crown className="w-3 h-3 mr-1" />
+                    <span className="mr-1">👑</span>
                     {ad.vip_level?.toUpperCase()} Premium
                   </Badge>
                 )}
-                {ad.category && <Badge variant="secondary">{ad.category}</Badge>}
+                {ad.category && (
+                  <Badge variant="secondary">{categoryLabels[ad.category] || ad.category}</Badge>
+                )}
               </div>
 
               <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-4">{ad.title}</h1>
 
-              {ad.description && (
-                <div className="prose prose-invert max-w-none">
-                  <p className="text-muted-foreground whitespace-pre-wrap">{ad.description}</p>
+              {/* Short Description */}
+              {ad.short_description && (
+                <p className="text-muted-foreground text-base leading-relaxed mb-4">{ad.short_description}</p>
+              )}
+
+              {/* Structured Fields */}
+              <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground mb-4">
+                {ad.delivery_time && (
+                  <span>⏱ Delivery: <span className="text-foreground">{ad.delivery_time}</span></span>
+                )}
+                {ad.price_range && (
+                  <span>💰 Range: <span className="text-foreground">{ad.price_range}</span></span>
+                )}
+                {ad.location && (
+                  <span>📍 Location: <span className="text-foreground">{ad.location}</span></span>
+                )}
+                {ad.experience_level && (
+                  <span>⭐ Experience: <span className="text-foreground">{ad.experience_level}</span></span>
+                )}
+                {ad.supported_seasons && (
+                  <span>🎮 Seasons: <span className="text-foreground">{ad.supported_seasons}</span></span>
+                )}
+              </div>
+
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="gap-1 text-xs">
+                      <Tag className="w-3 h-3" />
+                      {tag}
+                    </Badge>
+                  ))}
                 </div>
               )}
 
-              <div className="flex items-center gap-4 mt-6 text-xs text-muted-foreground">
+              <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-border pt-4">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   Created {new Date(ad.created_at).toLocaleDateString()}
@@ -203,67 +240,52 @@ const AdDetail = () => {
                 </span>
               </div>
             </div>
+
+            {/* Video Embed */}
+            {ad.video_url && <VideoEmbed url={ad.video_url} />}
+
+            {/* Full Description (Rich HTML) */}
+            {sanitizedFullDescription && (
+              <div className="glass-card p-6">
+                <h2 className="font-display text-lg font-semibold mb-4 text-foreground">Full Description</h2>
+                <div
+                  className="prose prose-invert max-w-none 
+                    prose-headings:font-display prose-headings:text-foreground
+                    prose-p:text-muted-foreground prose-p:leading-relaxed
+                    prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                    prose-li:text-muted-foreground
+                    prose-strong:text-foreground"
+                  dangerouslySetInnerHTML={{ __html: sanitizedFullDescription }}
+                />
+              </div>
+            )}
+
+            {/* Fallback: plain description if no full_description */}
+            {!sanitizedFullDescription && ad.description && (
+              <div className="glass-card p-6">
+                <h2 className="font-display text-lg font-semibold mb-4 text-foreground">Description</h2>
+                <p className="text-muted-foreground whitespace-pre-wrap leading-relaxed">{ad.description}</p>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4">
-            <div className={`glass-card p-6 ${isPremium ? 'glow-border-gold' : ''}`}>
-              {ad.price_usd && (
-                <div className="text-center mb-6">
-                  <p className="text-sm text-muted-foreground mb-1">Price</p>
-                  <p className="font-display text-4xl font-bold text-primary">${ad.price_usd}</p>
-                </div>
-              )}
-              <div className="space-y-3">
-                <Button className="w-full btn-fantasy-primary gap-2" asChild>
-                  <a href={`https://${ad.website}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-4 h-4" />
-                    Visit Website
-                  </a>
-                </Button>
-                {user?.id !== sellerId && (
-                  isValidSellerId ? (
-                    <ContactSellerButton sellerId={sellerId} listingTitle={ad.title} className="w-full" />
-                  ) : (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => toast.error('Seller messaging is not available for this ad')}
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Contact Seller
-                    </Button>
-                  )
-                )}
-              </div>
-            </div>
-
-            <div className="glass-card p-6">
-              <h3 className="font-display font-semibold mb-4 flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Seller Information
-              </h3>
-              <div className="flex items-center gap-3">
-                {seller?.avatar_url ? (
-                  <img src={seller.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <User className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                )}
-                <div>
-                  <p className="font-medium">{seller?.display_name || 'Anonymous'}</p>
-                  {seller?.created_at && (
-                    <p className="text-xs text-muted-foreground">
-                      Joined {new Date(seller.created_at).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+          <div>
+            <SellerInfoPanel
+              seller={seller}
+              listingsCount={sellerListingsCount}
+              sellerId={ad.user_id}
+              listingTitle={ad.title}
+              website={ad.website}
+              discordLink={ad.discord_link}
+              isPremium={isPremium}
+              vipLevel={ad.vip_level}
+              priceUsd={ad.price_usd}
+              currentUserId={user?.id}
+            />
 
             {ad.expires_at && (
-              <div className="glass-card p-4 border-l-4 border-yellow-500/50">
+              <div className="glass-card p-4 border-l-4 border-yellow-500/50 mt-4">
                 <p className="text-xs text-muted-foreground">
                   <strong className="text-yellow-500">Expires:</strong>{' '}
                   {new Date(ad.expires_at).toLocaleDateString()}

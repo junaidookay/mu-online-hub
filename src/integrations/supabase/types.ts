@@ -46,17 +46,27 @@ export type Database = {
           banner_url: string | null
           category: Database["public"]["Enums"]["seller_category"] | null
           created_at: string
+          delivery_time: string | null
           description: string | null
+          discord_link: string | null
+          experience_level: string | null
           expires_at: string | null
+          full_description: string | null
           id: string
           is_active: boolean | null
+          location: string | null
+          price_range: string | null
           price_usd: number | null
           rotation_order: number | null
+          short_description: string | null
           slot_id: number | null
           slug: string | null
+          supported_seasons: string | null
+          tags: string[] | null
           title: string
           updated_at: string
           user_id: string
+          video_url: string | null
           vip_level: Database["public"]["Enums"]["vip_level"] | null
           website: string
         }
@@ -65,17 +75,27 @@ export type Database = {
           banner_url?: string | null
           category?: Database["public"]["Enums"]["seller_category"] | null
           created_at?: string
+          delivery_time?: string | null
           description?: string | null
+          discord_link?: string | null
+          experience_level?: string | null
           expires_at?: string | null
+          full_description?: string | null
           id?: string
           is_active?: boolean | null
+          location?: string | null
+          price_range?: string | null
           price_usd?: number | null
           rotation_order?: number | null
+          short_description?: string | null
           slot_id?: number | null
           slug?: string | null
+          supported_seasons?: string | null
+          tags?: string[] | null
           title: string
           updated_at?: string
           user_id: string
+          video_url?: string | null
           vip_level?: Database["public"]["Enums"]["vip_level"] | null
           website: string
         }
@@ -84,17 +104,27 @@ export type Database = {
           banner_url?: string | null
           category?: Database["public"]["Enums"]["seller_category"] | null
           created_at?: string
+          delivery_time?: string | null
           description?: string | null
+          discord_link?: string | null
+          experience_level?: string | null
           expires_at?: string | null
+          full_description?: string | null
           id?: string
           is_active?: boolean | null
+          location?: string | null
+          price_range?: string | null
           price_usd?: number | null
           rotation_order?: number | null
+          short_description?: string | null
           slot_id?: number | null
           slug?: string | null
+          supported_seasons?: string | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
           user_id?: string
+          video_url?: string | null
           vip_level?: Database["public"]["Enums"]["vip_level"] | null
           website?: string
         }
