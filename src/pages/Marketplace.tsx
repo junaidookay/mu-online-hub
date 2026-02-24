@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Store, Search, ExternalLink, Briefcase } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import { SEOHead } from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ interface Advertisement {
 }
 
 const Marketplace = () => {
+  const [searchParams] = useSearchParams();
   const [ads, setAds] = useState<Advertisement[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
@@ -30,25 +31,37 @@ const Marketplace = () => {
   const { trackAdClick } = useClickTracking();
 
   useEffect(() => {
+    const requestedTab = searchParams.get('tab');
+    if (requestedTab === 'services' || requestedTab === 'marketplace') {
+      setActiveTab(requestedTab);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     const fetchAds = async () => {
       const { data } = await supabase
         .from('advertisements')
         .select('*')
-        .eq('ad_type', 'marketplace')
+        .eq('ad_type', activeTab)
         .eq('is_active', true)
         .order('vip_level', { ascending: false });
       
       if (data) setAds(data);
     };
     fetchAds();
-  }, []);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const categoryIds = activeTab === 'marketplace'
+      ? new Set(marketplaceCategories.map(c => c.id))
+      : new Set(serviceCategories.map(c => c.id));
+    setActiveCategory((prev) => (prev === 'all' || categoryIds.has(prev) ? prev : 'all'));
+  }, [activeTab]);
 
   const filteredAds = ads.filter(ad => 
     ad.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     ad.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const currentCategories = activeTab === 'marketplace' ? marketplaceCategories : serviceCategories;
 
   return (
     <div className="min-h-screen bg-background">

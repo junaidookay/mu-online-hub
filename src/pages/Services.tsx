@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 const Services = () => {
   const navigate = useNavigate();
   useEffect(() => {
-    navigate('/marketplace', { replace: true });
+    navigate('/marketplace?tab=services', { replace: true });
   }, [navigate]);
   return null;
 };
