@@ -209,7 +209,7 @@ const CreateSlotListing = () => {
           .eq('user_id', user.id)
           .eq('is_published', true)
           .eq('is_active', true)
-          .in('category', categoriesToFetch as any);
+          .in('category', categoriesToFetch);
         if (error) throw error;
         const ownedListings = (data || []).filter(l => l.user_id === user.id);
         setUserListings(ownedListings);
@@ -266,7 +266,7 @@ const CreateSlotListing = () => {
       let result;
 
       switch (slotConfig.table) {
-        case 'advertisements':
+        case 'advertisements': {
           const adTitle = formData.title || formData.name;
           result = await supabase
             .from('advertisements')
@@ -284,7 +284,7 @@ const CreateSlotListing = () => {
               supported_seasons: formData.supportedSeasons || null,
               discord_link: formData.discordLink || null,
               tags: selectedTags.length > 0 ? selectedTags : null,
-              category: (formData.category || null) as any,
+              category: formData.category ? (formData.category as SellerCategory) : null,
               website: formData.website,
               banner_url: formData.bannerUrl,
               ad_type: type === 'marketplace' ? 'marketplace' : 'services',
@@ -296,6 +296,7 @@ const CreateSlotListing = () => {
             .select()
             .single();
           break;
+        }
 
         case 'servers':
           result = await supabase

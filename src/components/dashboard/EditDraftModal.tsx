@@ -12,8 +12,11 @@ import { Loader2 } from 'lucide-react';
 import { getSlotConfig } from '@/lib/slotConfig';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Database } from '@/integrations/supabase/types';
 
 const RichTextEditor = lazy(() => import('@/components/editor/RichTextEditor'));
+
+type SellerCategory = Database["public"]["Enums"]["seller_category"];
 
 interface EditDraftModalProps {
   isOpen: boolean;
@@ -226,7 +229,7 @@ export const EditDraftModal = ({ isOpen, onClose, listing, onSuccess }: EditDraf
               supported_seasons: formData.supportedSeasons || null,
               discord_link: formData.discordLink || null,
               tags: selectedTags.length > 0 ? selectedTags : null,
-              category: (formData.category || null) as any,
+              category: formData.category ? (formData.category as SellerCategory) : null,
             })
             .eq('id', listing.id).eq('user_id', user.id));
           break;
