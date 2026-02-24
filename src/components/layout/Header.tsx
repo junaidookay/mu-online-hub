@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { 
   Menu, X, LogOut, Shield, User, Crown, UserCircle, Store, Wrench, 
-  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag, Search, Users, MessageCircle, Receipt
+  Server, Sparkles, DollarSign, Package, LayoutDashboard, ShoppingBag, Search, Users, MessageCircle, Receipt, Star
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,8 +35,7 @@ const slogans = [
 
 const navLinks = [
   { icon: Store, label: 'Marketplace', href: '/marketplace', description: 'Digital products & server files' },
-  { icon: Wrench, label: 'Services', href: '/services', description: 'Professional MU services' },
-  { icon: Server, label: 'Create Server', href: '/create-server', description: 'Launch your server' },
+  { icon: Server, label: 'Servers', href: '/servers', description: 'Browse MU Online servers' },
   { icon: Sparkles, label: 'Arcana', href: '/arcana-projects', description: 'Partner network' },
 ];
 
@@ -132,8 +131,8 @@ const Header = () => {
           </NavigationMenu>
 
           <Button variant="ghost" size="sm" className="text-sm" onClick={() => navigate('/top-50')}>
-            <Crown size={14} className="mr-1" />
-            Top Servers
+            <Star size={14} className="mr-1" />
+            Vote Rankings
           </Button>
 
           <Button variant="ghost" size="sm" className="text-sm" onClick={() => navigate('/pricing')}>
@@ -300,10 +299,9 @@ const Header = () => {
           </div>
           
           <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/top-50'); setIsMenuOpen(false); }}>
-            <Crown size={16} className="mr-2" />
-            Top Servers
+            <Star size={16} className="mr-2" />
+            Vote Rankings
           </Button>
-
           <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate('/pricing'); setIsMenuOpen(false); }}>
             <Crown size={16} className="mr-2" />
             Premium

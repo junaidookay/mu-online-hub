@@ -80,7 +80,7 @@ const MarketplaceAdvertise = () => {
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-          <Link to="/marketplace-ads">View All Marketplace Ads</Link>
+          <Link to="/marketplace">View All Marketplace Ads</Link>
         </Button>
       </div>
     </div>

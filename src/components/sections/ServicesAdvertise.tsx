@@ -80,7 +80,7 @@ const ServicesAdvertise = () => {
       </div>
       <div className="p-2 border-t border-border/30">
         <Button variant="outline" size="sm" className="w-full text-xs" asChild>
-          <Link to="/services-ads">View All Service Ads</Link>
+          <Link to="/marketplace">View All Service Ads</Link>
         </Button>
       </div>
     </div>

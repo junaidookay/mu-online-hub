@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +15,9 @@ import { SLOT_CONFIG, getSlotConfig } from '@/lib/slotConfig';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ImageUpload } from '@/components/upload/ImageUpload';
+import { Badge } from '@/components/ui/badge';
+
+const RichTextEditor = lazy(() => import('@/components/editor/RichTextEditor'));
 
 type SellerCategory = Database["public"]["Enums"]["seller_category"];
 
@@ -23,6 +26,31 @@ interface UserListing {
   title: string;
   category: SellerCategory;
 }
+
+const adCategoryOptions = [
+  { value: 'websites', label: 'Websites' },
+  { value: 'server_files', label: 'Server Files' },
+  { value: 'antihack', label: 'Antihack' },
+  { value: 'launchers', label: 'Launchers' },
+  { value: 'custom_scripts', label: 'Custom Scripts' },
+  { value: 'mu_websites', label: 'MU Websites' },
+  { value: 'mu_server_files', label: 'MU Server Files' },
+  { value: 'mu_protection', label: 'MU Protection' },
+  { value: 'mu_hosting', label: 'MU Hosting' },
+];
+
+const serviceCategoryOptions = [
+  { value: 'server_development', label: 'Server Development' },
+  { value: 'design_branding', label: 'Design & Branding' },
+  { value: 'skins_customization', label: 'Skins & Customization' },
+  { value: 'media', label: 'Media' },
+  { value: 'promotion', label: 'Promotion' },
+  { value: 'streaming', label: 'Streaming' },
+  { value: 'content_creators', label: 'Content Creators' },
+  { value: 'marketing_growth', label: 'Marketing & Growth' },
+];
+
+const tagOptions = ['MU Online', 'Season 17', 'Season 19', 'Season 20', 'PVP', 'PVE', 'Custom', 'Premium', 'Free', 'Long-term'];
 
 const CreateSlotListing = () => {
   const { user, isLoading: authLoading } = useAuth();
@@ -46,6 +74,7 @@ const CreateSlotListing = () => {
   const [selectedListingType, setSelectedListingType] = useState<'marketplace' | 'services'>('marketplace');
   const [selectedListingId, setSelectedListingId] = useState<string>('');
   const [loadingListings, setLoadingListings] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -59,12 +88,26 @@ const CreateSlotListing = () => {
     expRate: '',
     openDate: '',
     features: '',
+    // Server product page fields
+    longDescription: '',
+    discordLink: '',
+    logoUrl: '',
     // Promo specific
     highlight: '',
     text: '',
     link: '',
     // Slot 7 specific
     expiresAt: '',
+    // Ad extra fields
+    shortDescription: '',
+    fullDescription: '',
+    videoUrl: '',
+    deliveryTime: '',
+    priceRange: '',
+    location: '',
+    experienceLevel: '',
+    supportedSeasons: '',
+    category: '',
   });
 
   useEffect(() => {
@@ -73,7 +116,6 @@ const CreateSlotListing = () => {
     }
   }, [user, authLoading, navigate]);
 
-  // Check slot access for non-free slots
   useEffect(() => {
     const checkAccess = async () => {
       if (!user || !slotConfig) return;
@@ -144,58 +186,31 @@ const CreateSlotListing = () => {
         variant: 'destructive',
       });
     };
-    
-    if (user && !authLoading) {
-      checkAccess();
-    }
+    if (user && !authLoading) checkAccess();
   }, [user, authLoading, slotId, slotConfig, paymentSuccess, navigate, toast]);
 
   useEffect(() => {
     if (paymentSuccess) {
-      toast({
-        title: 'Payment Successful!',
-        description: 'You can now create your listing.',
-      });
+      toast({ title: 'Payment Successful!', description: 'You can now create your listing.' });
     }
   }, [paymentSuccess, toast]);
 
-  // Fetch user's PUBLISHED and ACTIVE listings for Slot 7 (Partner Discounts)
-  // Slot 7 is a promotional add-on ONLY - must link to existing listing
   useEffect(() => {
     const fetchUserListings = async () => {
       if (!user || slotId !== 7) return;
-      
       setLoadingListings(true);
       try {
-        // Marketplace categories (from seller_category enum)
-        const marketplaceCategories = [
-          'websites', 'server_files', 'antihack', 'launchers', 'custom_scripts',
-          'mu_websites', 'mu_server_files', 'mu_protection', 'mu_app_developer',
-          'mu_launchers', 'mu_installers', 'mu_hosting'
-        ] as const;
-        
-        // Services categories
-        const servicesCategories = [
-          'server_development', 'design_branding', 'skins_customization',
-          'media', 'promotion', 'streaming', 'content_creators', 'event_master', 'marketing_growth'
-        ] as const;
-        
-        const categoriesToFetch: SellerCategory[] = selectedListingType === 'marketplace' 
-          ? [...marketplaceCategories] 
-          : [...servicesCategories];
-        
-        // ONLY fetch published AND active listings that belong to user
+        const marketplaceCategories = ['websites', 'server_files', 'antihack', 'launchers', 'custom_scripts', 'mu_websites', 'mu_server_files', 'mu_protection', 'mu_app_developer', 'mu_launchers', 'mu_installers', 'mu_hosting'] as const;
+        const servicesCategories = ['server_development', 'design_branding', 'skins_customization', 'media', 'promotion', 'streaming', 'content_creators', 'event_master', 'marketing_growth'] as const;
+        const categoriesToFetch = (selectedListingType === 'marketplace' ? [...marketplaceCategories] : [...servicesCategories]) as unknown as SellerCategory[];
         const { data, error } = await supabase
           .from('listings')
           .select('id, title, category, is_published, is_active, user_id')
           .eq('user_id', user.id)
           .eq('is_published', true)
           .eq('is_active', true)
-          .in('category', categoriesToFetch);
-        
+          .in('category', categoriesToFetch as any);
         if (error) throw error;
-        
-        // Double-check ownership on client side for extra safety
         const ownedListings = (data || []).filter(l => l.user_id === user.id);
         setUserListings(ownedListings);
       } catch (error) {
@@ -205,7 +220,6 @@ const CreateSlotListing = () => {
         setLoadingListings(false);
       }
     };
-    
     fetchUserListings();
   }, [user, slotId, selectedListingType]);
 
@@ -216,13 +230,15 @@ const CreateSlotListing = () => {
         <div className="container py-8 text-center">
           <h1 className="text-2xl font-bold text-destructive">Invalid Slot</h1>
           <p className="text-muted-foreground mt-2">The requested slot type is not valid.</p>
-          <Button onClick={() => navigate('/pricing')} className="mt-4">
-            Go to Pricing
-          </Button>
+          <Button onClick={() => navigate('/pricing')} className="mt-4">Go to Pricing</Button>
         </div>
       </div>
     );
   }
+
+  const generateSlug = (title: string) => {
+    return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').substring(0, 60);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,7 +251,6 @@ const CreateSlotListing = () => {
       });
       return;
     }
-
     setLoading(true);
     if (slotConfig.table === 'premium_banners' && !formData.bannerUrl) {
       toast({
@@ -252,15 +267,28 @@ const CreateSlotListing = () => {
 
       switch (slotConfig.table) {
         case 'advertisements':
+          const adTitle = formData.title || formData.name;
           result = await supabase
             .from('advertisements')
             .insert({
               user_id: user.id,
-              title: formData.title || formData.name,
+              title: adTitle,
               description: formData.description,
+              short_description: formData.shortDescription || null,
+              full_description: formData.fullDescription || null,
+              video_url: formData.videoUrl || null,
+              delivery_time: formData.deliveryTime || null,
+              price_range: formData.priceRange || null,
+              location: formData.location || null,
+              experience_level: formData.experienceLevel || null,
+              supported_seasons: formData.supportedSeasons || null,
+              discord_link: formData.discordLink || null,
+              tags: selectedTags.length > 0 ? selectedTags : null,
+              category: (formData.category || null) as any,
               website: formData.website,
               banner_url: formData.bannerUrl,
               ad_type: type === 'marketplace' ? 'marketplace' : 'services',
+              slug: generateSlug(adTitle),
               slot_id: slotId,
               is_active: true,
               vip_level: 'gold',
@@ -276,12 +304,16 @@ const CreateSlotListing = () => {
               user_id: user.id,
               name: formData.name,
               website: formData.website,
-              banner_url: slotId === 6 ? null : formData.bannerUrl,
+              logo_url: formData.logoUrl || null,
+              banner_url: slotId === 6 ? null : (formData.bannerUrl || null),
               season: formData.season || 'Season 17',
               part: formData.part || 'Part 1',
               exp_rate: formData.expRate || '1000x',
               open_date: formData.openDate || null,
               features: formData.features ? formData.features.split(',').map(f => f.trim()) : [],
+              long_description: formData.longDescription || null,
+              discord_link: formData.discordLink || null,
+              slug: generateSlug(formData.name),
               slot_id: slotId,
               is_active: true,
               is_premium: slotId === 3,
@@ -357,19 +389,9 @@ const CreateSlotListing = () => {
           break;
 
         case 'rotating_promos':
-          // Slot 7 - Partner Discounts: PROMOTIONAL ADD-ON ONLY
-          // Must ALWAYS attach to an existing marketplace/services listing
           if (slotId === 7) {
-            // Validate required fields
-            if (!selectedListingId) {
-              throw new Error('Please select a listing to promote');
-            }
-            
-            if (!formData.text?.trim()) {
-              throw new Error('Promotional text is required');
-            }
-            
-            // Verify the listing exists, is published, and belongs to user
+            if (!selectedListingId) throw new Error('Please select a listing to promote');
+            if (!formData.text?.trim()) throw new Error('Promotional text is required');
             const { data: verifiedListing, error: verifyError } = await supabase
               .from('listings')
               .select('id, title, user_id, is_published, is_active, website')
@@ -378,42 +400,25 @@ const CreateSlotListing = () => {
               .eq('is_published', true)
               .eq('is_active', true)
               .single();
-            
-            if (verifyError || !verifiedListing) {
-              throw new Error('Selected listing is not valid, not published, or does not belong to you');
-            }
-            
-            // Build link: use custom link if provided, otherwise link to listing page
+            if (verifyError || !verifiedListing) throw new Error('Selected listing is not valid');
             const promoLink = formData.link?.trim() || `/listing/${selectedListingId}`;
-            
             result = await supabase
               .from('rotating_promos')
               .insert({
-                user_id: user.id,
-                listing_id: selectedListingId,
-                listing_type: selectedListingType,
-                text: formData.text.trim(),
-                highlight: formData.highlight?.trim() || '',
-                link: promoLink,
-                promo_type: 'discount',
-                slot_id: slotId,
-                is_active: false, // Default to inactive - admin can approve/enable
+                user_id: user.id, listing_id: selectedListingId, listing_type: selectedListingType,
+                text: formData.text.trim(), highlight: formData.highlight?.trim() || '',
+                link: promoLink, promo_type: 'discount', slot_id: slotId, is_active: false,
                 expires_at: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
               })
               .select()
               .single();
           } else {
-            // Slot 8 - Server Events (standalone promo, no listing required)
             result = await supabase
               .from('rotating_promos')
               .insert({
-                user_id: user.id,
-                text: formData.text || formData.name,
-                highlight: formData.highlight,
-                link: formData.link || formData.website,
-                promo_type: 'event',
-                slot_id: slotId,
-                is_active: true,
+                user_id: user.id, text: formData.text || formData.name,
+                highlight: formData.highlight, link: formData.link || formData.website,
+                promo_type: 'event', slot_id: slotId, is_active: true,
                 expires_at: formData.expiresAt ? new Date(formData.expiresAt).toISOString() : null,
               })
               .select()
@@ -425,15 +430,9 @@ const CreateSlotListing = () => {
           throw new Error('Unknown listing type');
       }
 
-      if (result?.error) {
-        throw result.error;
-      }
+      if (result?.error) throw result.error;
 
-      toast({
-        title: 'Listing Created!',
-        description: 'Your listing is now live on the homepage.',
-      });
-
+      toast({ title: 'Listing Created!', description: 'Your listing is now live on the homepage.' });
       navigate('/dashboard');
     } catch (error: unknown) {
       console.error('Failed to create listing:', error);
@@ -452,6 +451,10 @@ const CreateSlotListing = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -460,6 +463,129 @@ const CreateSlotListing = () => {
     );
   }
 
+  const renderAdExtraFields = () => {
+    const categoryOpts = type === 'marketplace' ? adCategoryOptions : serviceCategoryOptions;
+    return (
+      <>
+        <div>
+          <Label htmlFor="category">Category</Label>
+          <Select value={formData.category} onValueChange={(v) => handleChange('category', v)}>
+            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+            <SelectContent>
+              {categoryOpts.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="shortDescription">Short Description</Label>
+          <Textarea
+            id="shortDescription"
+            value={formData.shortDescription}
+            onChange={(e) => handleChange('shortDescription', e.target.value)}
+            placeholder="A brief summary shown on the listing card"
+            rows={2}
+          />
+        </div>
+        <div>
+          <Label>Full Description</Label>
+          <Suspense fallback={<div className="h-[200px] rounded-md border border-input bg-muted/30 animate-pulse" />}>
+            <RichTextEditor
+              content={formData.fullDescription}
+              onChange={(html) => handleChange('fullDescription', html)}
+              placeholder="Write a detailed description with formatting..."
+            />
+          </Suspense>
+        </div>
+        <div>
+          <Label htmlFor="videoUrl">Video URL (YouTube/Vimeo)</Label>
+          <Input
+            id="videoUrl"
+            value={formData.videoUrl}
+            onChange={(e) => handleChange('videoUrl', e.target.value)}
+            placeholder="https://youtube.com/watch?v=..."
+          />
+        </div>
+        <div>
+          <Label htmlFor="discordLink">Discord Link</Label>
+          <Input
+            id="discordLink"
+            value={formData.discordLink}
+            onChange={(e) => handleChange('discordLink', e.target.value)}
+            placeholder="https://discord.gg/..."
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="deliveryTime">Delivery Time</Label>
+            <Input
+              id="deliveryTime"
+              value={formData.deliveryTime}
+              onChange={(e) => handleChange('deliveryTime', e.target.value)}
+              placeholder="e.g., 24 hours"
+            />
+          </div>
+          <div>
+            <Label htmlFor="priceRange">Price Range</Label>
+            <Input
+              id="priceRange"
+              value={formData.priceRange}
+              onChange={(e) => handleChange('priceRange', e.target.value)}
+              placeholder="e.g., $50 - $200"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="location">Location</Label>
+            <Input
+              id="location"
+              value={formData.location}
+              onChange={(e) => handleChange('location', e.target.value)}
+              placeholder="e.g., Europe"
+            />
+          </div>
+          <div>
+            <Label htmlFor="experienceLevel">Experience Level</Label>
+            <Select value={formData.experienceLevel} onValueChange={(v) => handleChange('experienceLevel', v)}>
+              <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="expert">Expert</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        {type === 'services' && (
+          <div>
+            <Label htmlFor="supportedSeasons">Supported Seasons</Label>
+            <Input
+              id="supportedSeasons"
+              value={formData.supportedSeasons}
+              onChange={(e) => handleChange('supportedSeasons', e.target.value)}
+              placeholder="e.g., Season 17, Season 19, Season 20"
+            />
+          </div>
+        )}
+        <div>
+          <Label>Tags</Label>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {tagOptions.map(tag => (
+              <Badge
+                key={tag}
+                variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                className="cursor-pointer"
+                onClick={() => toggleTag(tag)}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </>
+    );
+  };
+
   const renderFormFields = () => {
     switch (slotConfig.table) {
       case 'advertisements':
@@ -467,33 +593,15 @@ const CreateSlotListing = () => {
           <>
             <div>
               <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => handleChange('title', e.target.value)}
-                placeholder="Your advertisement title"
-                required
-              />
+              <Input id="title" value={formData.title} onChange={(e) => handleChange('title', e.target.value)} placeholder="Your advertisement title" required />
             </div>
             <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleChange('description', e.target.value)}
-                placeholder="Brief description of your product/service"
-                rows={3}
-              />
+              <Label htmlFor="description">Brief Description</Label>
+              <Textarea id="description" value={formData.description} onChange={(e) => handleChange('description', e.target.value)} placeholder="Brief description of your product/service" rows={2} />
             </div>
             <div>
               <Label htmlFor="website">Website *</Label>
-              <Input
-                id="website"
-                value={formData.website}
-                onChange={(e) => handleChange('website', e.target.value)}
-                placeholder="example.com"
-                required
-              />
+              <Input id="website" value={formData.website} onChange={(e) => handleChange('website', e.target.value)} placeholder="example.com" required />
             </div>
             <div>
               <Label>Banner Image</Label>
@@ -507,6 +615,7 @@ const CreateSlotListing = () => {
                 />
               )}
             </div>
+            {renderAdExtraFields()}
           </>
         );
 
@@ -515,63 +624,33 @@ const CreateSlotListing = () => {
           <>
             <div>
               <Label htmlFor="name">Server Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Your server name"
-                required
-              />
+              <Input id="name" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Your server name" required />
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="season">Season *</Label>
-                <Input
-                  id="season"
-                  value={formData.season}
-                  onChange={(e) => handleChange('season', e.target.value)}
-                  placeholder="Season 17"
-                  required
-                />
+                <Input id="season" value={formData.season} onChange={(e) => handleChange('season', e.target.value)} placeholder="Season 17" required />
               </div>
               <div>
                 <Label htmlFor="part">Part</Label>
-                <Input
-                  id="part"
-                  value={formData.part}
-                  onChange={(e) => handleChange('part', e.target.value)}
-                  placeholder="Part 1-2"
-                />
+                <Input id="part" value={formData.part} onChange={(e) => handleChange('part', e.target.value)} placeholder="Part 1-2" />
               </div>
               <div>
                 <Label htmlFor="expRate">EXP Rate *</Label>
-                <Input
-                  id="expRate"
-                  value={formData.expRate}
-                  onChange={(e) => handleChange('expRate', e.target.value)}
-                  placeholder="1000x"
-                  required
-                />
+                <Input id="expRate" value={formData.expRate} onChange={(e) => handleChange('expRate', e.target.value)} placeholder="1000x" required />
               </div>
             </div>
             <div>
               <Label htmlFor="openDate">Opening Date</Label>
-              <Input
-                id="openDate"
-                type="date"
-                value={formData.openDate}
-                onChange={(e) => handleChange('openDate', e.target.value)}
-              />
+              <Input id="openDate" type="date" value={formData.openDate} onChange={(e) => handleChange('openDate', e.target.value)} />
             </div>
             <div>
               <Label htmlFor="website">Website *</Label>
-              <Input
-                id="website"
-                value={formData.website}
-                onChange={(e) => handleChange('website', e.target.value)}
-                placeholder="yourserver.com"
-                required
-              />
+              <Input id="website" value={formData.website} onChange={(e) => handleChange('website', e.target.value)} placeholder="yourserver.com" required />
+            </div>
+            <div>
+              <Label htmlFor="discordLink">Discord Link</Label>
+              <Input id="discordLink" value={formData.discordLink} onChange={(e) => handleChange('discordLink', e.target.value)} placeholder="https://discord.gg/..." />
             </div>
             {slotId !== 6 && (
               <div>
@@ -598,6 +677,24 @@ const CreateSlotListing = () => {
                 )}
               </div>
             )}
+            {slotId !== 6 && (
+              <div>
+                <Label htmlFor="logoUrl">Logo Image URL</Label>
+                <Input id="logoUrl" value={formData.logoUrl} onChange={(e) => handleChange('logoUrl', e.target.value)} placeholder="https://your-image-url.com/logo.png" />
+              </div>
+            )}
+            {slotId !== 6 && (
+              <div>
+                <Label>Long Description</Label>
+                <Suspense fallback={<div className="h-[200px] rounded-md border border-input bg-muted/30 animate-pulse" />}>
+                  <RichTextEditor
+                    content={formData.longDescription}
+                    onChange={(html) => handleChange('longDescription', html)}
+                    placeholder="Write a detailed description of your server..."
+                  />
+                </Suspense>
+              </div>
+            )}
           </>
         );
 
@@ -606,54 +703,25 @@ const CreateSlotListing = () => {
           <>
             <div>
               <Label htmlFor="name">Server Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="YOURSERVER.COM"
-                required
-              />
+              <Input id="name" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="YOURSERVER.COM" required />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="expRate">EXP Rate *</Label>
-                <Input
-                  id="expRate"
-                  value={formData.expRate}
-                  onChange={(e) => handleChange('expRate', e.target.value)}
-                  placeholder="x1000"
-                  required
-                />
+                <Input id="expRate" value={formData.expRate} onChange={(e) => handleChange('expRate', e.target.value)} placeholder="x1000" required />
               </div>
               <div>
                 <Label htmlFor="season">Version *</Label>
-                <Input
-                  id="season"
-                  value={formData.season}
-                  onChange={(e) => handleChange('season', e.target.value)}
-                  placeholder="S17"
-                  required
-                />
+                <Input id="season" value={formData.season} onChange={(e) => handleChange('season', e.target.value)} placeholder="S17" required />
               </div>
             </div>
             <div>
               <Label htmlFor="openDate">Opening Date</Label>
-              <Input
-                id="openDate"
-                value={formData.openDate}
-                onChange={(e) => handleChange('openDate', e.target.value)}
-                placeholder="Open 21.01"
-              />
+              <Input id="openDate" value={formData.openDate} onChange={(e) => handleChange('openDate', e.target.value)} placeholder="Open 21.01" />
             </div>
             <div>
               <Label htmlFor="website">Website *</Label>
-              <Input
-                id="website"
-                value={formData.website}
-                onChange={(e) => handleChange('website', e.target.value)}
-                placeholder="yourserver.com"
-                required
-              />
+              <Input id="website" value={formData.website} onChange={(e) => handleChange('website', e.target.value)} placeholder="yourserver.com" required />
             </div>
           </>
         );
@@ -663,23 +731,11 @@ const CreateSlotListing = () => {
           <>
             <div>
               <Label htmlFor="name">Server/Site Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Your server or site name"
-                required
-              />
+              <Input id="name" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Your server or site name" required />
             </div>
             <div>
               <Label htmlFor="website">Website *</Label>
-              <Input
-                id="website"
-                value={formData.website}
-                onChange={(e) => handleChange('website', e.target.value)}
-                placeholder="yoursite.com"
-                required
-              />
+              <Input id="website" value={formData.website} onChange={(e) => handleChange('website', e.target.value)} placeholder="yoursite.com" required />
             </div>
             <div>
               <Label>Banner Image (Required) *</Label>
@@ -700,22 +756,12 @@ const CreateSlotListing = () => {
         );
 
       case 'rotating_promos':
-        // Slot 7 - Partner Discounts (linked to existing listing)
         if (slotId === 7) {
           return (
             <>
               <div>
-                <Label className="text-base font-semibold mb-3 block">
-                  What type of listing are you promoting?
-                </Label>
-                <RadioGroup
-                  value={selectedListingType}
-                  onValueChange={(value: 'marketplace' | 'services') => {
-                    setSelectedListingType(value);
-                    setSelectedListingId(''); // Reset selection when type changes
-                  }}
-                  className="flex gap-4"
-                >
+                <Label className="text-base font-semibold mb-3 block">What type of listing are you promoting?</Label>
+                <RadioGroup value={selectedListingType} onValueChange={(value: 'marketplace' | 'services') => { setSelectedListingType(value); setSelectedListingId(''); }} className="flex gap-4">
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="marketplace" id="marketplace" />
                     <Label htmlFor="marketplace" className="cursor-pointer">Marketplace</Label>
@@ -726,144 +772,58 @@ const CreateSlotListing = () => {
                   </div>
                 </RadioGroup>
               </div>
-
               <div>
                 <Label htmlFor="listing">Select Your Listing *</Label>
                 {loadingListings ? (
-                  <div className="flex items-center gap-2 py-2 text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Loading your listings...
-                  </div>
+                  <div className="flex items-center gap-2 py-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Loading your listings...</div>
                 ) : userListings.length === 0 ? (
                   <div className="py-2">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      You don't have any published {selectedListingType} listings yet.
-                    </p>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => navigate(selectedListingType === 'marketplace' ? '/marketplace' : '/services')}
-                    >
-                      Create a {selectedListingType} listing first
-                    </Button>
+                    <p className="text-sm text-muted-foreground mb-2">You don't have any published {selectedListingType} listings yet.</p>
+                    <Button type="button" variant="outline" size="sm" onClick={() => navigate('/marketplace')}>Create a {selectedListingType} listing first</Button>
                   </div>
                 ) : (
                   <Select value={selectedListingId} onValueChange={setSelectedListingId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a listing to promote" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {userListings.map((listing) => (
-                        <SelectItem key={listing.id} value={listing.id}>
-                          {listing.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
+                    <SelectTrigger><SelectValue placeholder="Select a listing to promote" /></SelectTrigger>
+                    <SelectContent>{userListings.map(l => <SelectItem key={l.id} value={l.id}>{l.title}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
               </div>
-
               <div>
                 <Label htmlFor="text">Promotional Text *</Label>
-                <Input
-                  id="text"
-                  value={formData.text}
-                  onChange={(e) => handleChange('text', e.target.value)}
-                  placeholder="e.g., VPS Hosting Special, 50% Off Server Files"
-                  required
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  A short title for your promotion
-                </p>
+                <Input id="text" value={formData.text} onChange={(e) => handleChange('text', e.target.value)} placeholder="e.g., VPS Hosting Special, 50% Off" required />
               </div>
-
               <div>
                 <Label htmlFor="highlight">Highlight Text *</Label>
-                <Input
-                  id="highlight"
-                  value={formData.highlight}
-                  onChange={(e) => handleChange('highlight', e.target.value)}
-                  placeholder="e.g., -20%, Limited Time, NEW"
-                  required
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  A short badge/highlight shown prominently
-                </p>
+                <Input id="highlight" value={formData.highlight} onChange={(e) => handleChange('highlight', e.target.value)} placeholder="e.g., -20%, Limited Time" required />
               </div>
-
               <div>
                 <Label htmlFor="link">Link URL (optional)</Label>
-                <Input
-                  id="link"
-                  value={formData.link}
-                  onChange={(e) => handleChange('link', e.target.value)}
-                  placeholder="https://yoursite.com/promo"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Custom link for the promotion. If left empty, links to the listing.
-                </p>
+                <Input id="link" value={formData.link} onChange={(e) => handleChange('link', e.target.value)} placeholder="https://yoursite.com/promo" />
               </div>
-
               <div>
                 <Label htmlFor="expiresAt">Expiration Date (optional)</Label>
-                <Input
-                  id="expiresAt"
-                  type="date"
-                  value={formData.expiresAt}
-                  onChange={(e) => handleChange('expiresAt', e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  When should this promotion stop showing?
-                </p>
+                <Input id="expiresAt" type="date" value={formData.expiresAt} onChange={(e) => handleChange('expiresAt', e.target.value)} />
               </div>
             </>
           );
         }
-        
-        // Slot 8 - Server Events (standalone promo)
         return (
           <>
             <div>
               <Label htmlFor="text">Event Name *</Label>
-              <Input
-                id="text"
-                value={formData.text}
-                onChange={(e) => handleChange('text', e.target.value)}
-                placeholder="Castle Siege Event"
-                required
-              />
+              <Input id="text" value={formData.text} onChange={(e) => handleChange('text', e.target.value)} placeholder="Castle Siege Event" required />
             </div>
             <div>
               <Label htmlFor="highlight">Event Time/Info *</Label>
-              <Input
-                id="highlight"
-                value={formData.highlight}
-                onChange={(e) => handleChange('highlight', e.target.value)}
-                placeholder="Tonight 8PM"
-                required
-              />
+              <Input id="highlight" value={formData.highlight} onChange={(e) => handleChange('highlight', e.target.value)} placeholder="Tonight 8PM" required />
             </div>
             <div>
               <Label htmlFor="link">Event Link URL</Label>
-              <Input
-                id="link"
-                value={formData.link}
-                onChange={(e) => handleChange('link', e.target.value)}
-                placeholder="https://yourserver.com/events"
-              />
+              <Input id="link" value={formData.link} onChange={(e) => handleChange('link', e.target.value)} placeholder="https://yourserver.com/events" />
             </div>
             <div>
               <Label htmlFor="expiresAt">Event End Date</Label>
-              <Input
-                id="expiresAt"
-                type="date"
-                value={formData.expiresAt}
-                onChange={(e) => handleChange('expiresAt', e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                The promotion will auto-hide after this date
-              </p>
+              <Input id="expiresAt" type="date" value={formData.expiresAt} onChange={(e) => handleChange('expiresAt', e.target.value)} />
             </div>
           </>
         );
@@ -875,30 +835,15 @@ const CreateSlotListing = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead 
-        title={`Create ${slotConfig.name} - MU Online Hub`}
-        description={`Create your ${slotConfig.name} listing`}
-      />
+      <SEOHead title={`Create ${slotConfig.name} - MU Online Hub`} description={`Create your ${slotConfig.name} listing`} />
       <Header />
-      
       <div className="container py-8 max-w-2xl">
-        <Button
-          variant="ghost"
-          className="mb-6"
-          onClick={() => navigate(-1)}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back
+        <Button variant="ghost" className="mb-6" onClick={() => navigate(-1)}>
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back
         </Button>
-
         <div className="glass-card p-6">
-          <h1 className="font-display text-2xl font-bold text-gradient-gold mb-2">
-            Create {slotConfig.name}
-          </h1>
-          <p className="text-muted-foreground mb-6">
-            {slotConfig.description}
-          </p>
-
+          <h1 className="font-display text-2xl font-bold text-gradient-gold mb-2">Create {slotConfig.name}</h1>
+          <p className="text-muted-foreground mb-6">{slotConfig.description}</p>
           <form onSubmit={handleSubmit} className="space-y-4">
             {renderFormFields()}
 
