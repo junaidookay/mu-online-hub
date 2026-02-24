@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,8 +15,13 @@ import { Loader2, Check } from 'lucide-react';
 import { getSlotConfig, SLOT_CONFIG } from '@/lib/slotConfig';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 import { categoryLabels, marketplaceCategories, serviceCategories } from '@/lib/categories';
+import { Badge } from '@/components/ui/badge';
 
 type SellerCategory = Database["public"]["Enums"]["seller_category"];
+
+const RichTextEditor = lazy(() => import('@/components/editor/RichTextEditor'));
+
+const tagOptions = ['MU Online', 'Season 17', 'Season 19', 'Season 20', 'PVP', 'PVE', 'Custom', 'Premium', 'Free', 'Long-term'];
 
 interface CreateDraftModalProps {
   isOpen: boolean;
@@ -61,6 +66,7 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
   const [loadingListings, setLoadingListings] = useState(false);
   const [availableCategories, setAvailableCategories] = useState<SellerCategory[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const [bannerAvailability, setBannerAvailability] = useState<{
     activeCount: number;
@@ -77,6 +83,15 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
     priceUsd: '',
     website: '',
     bannerUrl: '',
+    shortDescription: '',
+    fullDescription: '',
+    videoUrl: '',
+    deliveryTime: '',
+    priceRange: '',
+    location: '',
+    experienceLevel: '',
+    supportedSeasons: '',
+    discordLink: '',
     // Server specific
     season: '',
     part: '',
@@ -89,6 +104,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
     link: '',
     expiresAt: '',
   });
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  };
 
   // Fetch packages for this slot
   useEffect(() => {
@@ -275,6 +294,15 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
         website: '',
         bannerUrl: '',
         season: '',
+        shortDescription: '',
+        fullDescription: '',
+        videoUrl: '',
+        deliveryTime: '',
+        priceRange: '',
+        location: '',
+        experienceLevel: '',
+        supportedSeasons: '',
+        discordLink: '',
         part: '',
         expRate: '',
         openDate: '',
@@ -285,8 +313,10 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
         expiresAt: '',
       });
       setSelectedListingId('');
+      setSelectedTags([]);
     }
   }, [isOpen]);
+
 
   const handleChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -337,6 +367,16 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
               price_usd: formData.priceUsd ? parseFloat(formData.priceUsd) : null,
               website: formData.website,
               banner_url: formData.bannerUrl || null,
+              short_description: formData.shortDescription || null,
+              full_description: formData.fullDescription || null,
+              video_url: formData.videoUrl || null,
+              delivery_time: formData.deliveryTime || null,
+              price_range: formData.priceRange || null,
+              location: formData.location || null,
+              experience_level: formData.experienceLevel || null,
+              supported_seasons: formData.supportedSeasons || null,
+              discord_link: formData.discordLink || null,
+              tags: selectedTags.length > 0 ? selectedTags : null,
               ad_type: slotId === 1 ? 'marketplace' : 'services',
               slot_id: slotId,
               is_active: false,
@@ -708,6 +748,114 @@ export const CreateDraftModal = ({ isOpen, onClose, slotId, initialPackageId, on
                 maxSizeMB={5}
                 aspectRatio="468x60"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="shortDescription">Short Description</Label>
+              <Textarea
+                id="shortDescription"
+                value={formData.shortDescription}
+                onChange={(e) => handleChange('shortDescription', e.target.value)}
+                placeholder="A brief summary shown on the listing card"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Full Description</Label>
+              <Suspense fallback={<div className="h-[200px] rounded-md border border-input bg-muted/30 animate-pulse" />}>
+                <RichTextEditor
+                  content={formData.fullDescription}
+                  onChange={(html) => handleChange('fullDescription', html)}
+                  placeholder="Write a detailed description with formatting..."
+                />
+              </Suspense>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="videoUrl">Video URL (YouTube/Vimeo)</Label>
+              <Input
+                id="videoUrl"
+                value={formData.videoUrl}
+                onChange={(e) => handleChange('videoUrl', e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="discordLink">Discord Link</Label>
+              <Input
+                id="discordLink"
+                value={formData.discordLink}
+                onChange={(e) => handleChange('discordLink', e.target.value)}
+                placeholder="https://discord.gg/..."
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="deliveryTime">Delivery Time</Label>
+                <Input
+                  id="deliveryTime"
+                  value={formData.deliveryTime}
+                  onChange={(e) => handleChange('deliveryTime', e.target.value)}
+                  placeholder="e.g., 24 hours"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="priceRange">Price Range</Label>
+                <Input
+                  id="priceRange"
+                  value={formData.priceRange}
+                  onChange={(e) => handleChange('priceRange', e.target.value)}
+                  placeholder="e.g., $50 - $200"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => handleChange('location', e.target.value)}
+                  placeholder="e.g., Europe"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="experienceLevel">Experience Level</Label>
+                <Select value={formData.experienceLevel} onValueChange={(v) => handleChange('experienceLevel', v)}>
+                  <SelectTrigger id="experienceLevel">
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="beginner">Beginner</SelectItem>
+                    <SelectItem value="intermediate">Intermediate</SelectItem>
+                    <SelectItem value="expert">Expert</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {slotId === 2 && (
+              <div className="space-y-2">
+                <Label htmlFor="supportedSeasons">Supported Seasons</Label>
+                <Input
+                  id="supportedSeasons"
+                  value={formData.supportedSeasons}
+                  onChange={(e) => handleChange('supportedSeasons', e.target.value)}
+                  placeholder="e.g., Season 17, Season 19, Season 20"
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2">
+                {tagOptions.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                    className="cursor-pointer"
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </>
         );

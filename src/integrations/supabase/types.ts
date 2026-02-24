@@ -303,15 +303,19 @@ export type Database = {
           created_at: string
           description: string | null
           expires_at: string | null
+          full_description: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
           is_published: boolean | null
           price_usd: number | null
           published_at: string | null
+          short_description: string | null
+          tags: string[] | null
           title: string
           updated_at: string
           user_id: string
+          video_url: string | null
           website: string | null
         }
         Insert: {
@@ -319,15 +323,19 @@ export type Database = {
           created_at?: string
           description?: string | null
           expires_at?: string | null
+          full_description?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           is_published?: boolean | null
           price_usd?: number | null
           published_at?: string | null
+          short_description?: string | null
+          tags?: string[] | null
           title: string
           updated_at?: string
           user_id: string
+          video_url?: string | null
           website?: string | null
         }
         Update: {
@@ -335,15 +343,19 @@ export type Database = {
           created_at?: string
           description?: string | null
           expires_at?: string | null
+          full_description?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           is_published?: boolean | null
           price_usd?: number | null
           published_at?: string | null
+          short_description?: string | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
           user_id?: string
+          video_url?: string | null
           website?: string | null
         }
         Relationships: []

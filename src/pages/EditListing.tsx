@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,13 +14,22 @@ import Header from '@/components/layout/Header';
 import { ImageUpload } from '@/components/upload/ImageUpload';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import { categoryLabels } from '@/lib/categories';
+import { Badge } from '@/components/ui/badge';
 
 type SellerCategory = Database["public"]["Enums"]["seller_category"];
+
+const RichTextEditor = lazy(() => import('@/components/editor/RichTextEditor'));
+
+const tagOptions = ['MU Online', 'Season 17', 'Season 19', 'Season 20', 'PVP', 'PVE', 'Custom', 'Premium', 'Free', 'Long-term'];
 
 const EditListing = () => {
   const { id } = useParams<{ id: string }>();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [fullDescription, setFullDescription] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [category, setCategory] = useState<SellerCategory | ''>('');
   const [priceUsd, setPriceUsd] = useState('');
   const [website, setWebsite] = useState('');
@@ -86,12 +95,20 @@ const EditListing = () => {
     });
     setTitle(listing.title);
     setDescription(listing.description || '');
+    setShortDescription(listing.short_description || '');
+    setFullDescription(listing.full_description || '');
+    setVideoUrl(listing.video_url || '');
+    setSelectedTags(listing.tags || []);
     setCategory(listing.category ?? '');
     setPriceUsd(listing.price_usd?.toString() || '');
     setWebsite(listing.website || '');
     setImageUrl(listing.image_url || '');
 
     setIsLoading(false);
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,6 +128,10 @@ const EditListing = () => {
         .update({
           title: title.trim(),
           description: description.trim() || null,
+          short_description: shortDescription.trim() || null,
+          full_description: fullDescription || null,
+          video_url: videoUrl.trim() || null,
+          tags: selectedTags.length > 0 ? selectedTags : null,
           category: category as SellerCategory,
           price_usd: priceUsd ? parseFloat(priceUsd) : null,
           website: website.trim() || null,
@@ -218,6 +239,56 @@ const EditListing = () => {
                 placeholder="Describe your product or service..."
                 className="bg-muted/50 min-h-[120px]"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="shortDescription">Short Description</Label>
+              <Textarea
+                id="shortDescription"
+                value={shortDescription}
+                onChange={(e) => setShortDescription(e.target.value)}
+                placeholder="A brief summary shown on the listing card"
+                className="bg-muted/50"
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Full Description</Label>
+              <Suspense fallback={<div className="h-[200px] rounded-md border border-input bg-muted/30 animate-pulse" />}>
+                <RichTextEditor
+                  content={fullDescription}
+                  onChange={(html) => setFullDescription(html)}
+                  placeholder="Write a detailed description with formatting..."
+                />
+              </Suspense>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="videoUrl">Video URL (YouTube/Vimeo)</Label>
+              <Input
+                id="videoUrl"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+                className="bg-muted/50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tags</Label>
+              <div className="flex flex-wrap gap-2">
+                {tagOptions.map(tag => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? 'default' : 'outline'}
+                    className="cursor-pointer"
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
