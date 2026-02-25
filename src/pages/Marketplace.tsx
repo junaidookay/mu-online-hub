@@ -20,6 +20,7 @@ interface Advertisement {
   website: string;
   banner_url: string | null;
   vip_level: 'none' | 'gold' | 'diamond' | null;
+  slug?: string | null;
 }
 
 const Marketplace = () => {
@@ -145,21 +146,14 @@ const Marketplace = () => {
                 <h2 className="text-lg font-semibold mb-3 text-muted-foreground">Sponsored</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredAds.map((ad) => {
+                    const adSlug = ad.slug || ad.id;
                     const href = normalizeExternalUrl(ad.website);
-                    const CardComponent = href ? 'a' : 'div';
-                    const cardProps = href
-                      ? ({
-                          href,
-                          target: '_blank',
-                          rel: 'noopener noreferrer',
-                          onClick: () => trackAdClick(ad.id, href),
-                        } as const)
-                      : undefined;
 
                     return (
-                      <CardComponent
+                      <Link
                         key={ad.id}
-                        {...cardProps}
+                        to={`/marketplace-ads/${adSlug}`}
+                        onClick={() => trackAdClick(ad.id, href || ad.website)}
                         className="glass-card overflow-hidden group hover:glow-border-gold transition-all"
                       >
                         {ad.banner_url && (
@@ -187,7 +181,7 @@ const Marketplace = () => {
                             <p className="text-sm text-muted-foreground line-clamp-2">{ad.description}</p>
                           )}
                         </div>
-                      </CardComponent>
+                      </Link>
                     );
                   })}
                 </div>
@@ -239,6 +233,54 @@ const Marketplace = () => {
                 </div>
               </div>
             </div>
+
+            {/* Sponsored Ads */}
+            {filteredAds.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold mb-3 text-muted-foreground">Sponsored</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredAds.map((ad) => {
+                    const adSlug = ad.slug || ad.id;
+                    const href = normalizeExternalUrl(ad.website);
+
+                    return (
+                      <Link
+                        key={ad.id}
+                        to={`/services-ads/${adSlug}`}
+                        onClick={() => trackAdClick(ad.id, href || ad.website)}
+                        className="glass-card overflow-hidden group hover:glow-border-gold transition-all"
+                      >
+                        {ad.banner_url && (
+                          <div className="aspect-video relative overflow-hidden">
+                            <img 
+                              src={ad.banner_url} 
+                              alt={ad.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                            {ad.vip_level && ad.vip_level !== 'none' && (
+                              <Badge className={`absolute top-2 right-2 ${ad.vip_level === 'diamond' ? 'vip-diamond' : 'vip-gold'}`}>
+                                {ad.vip_level.toUpperCase()}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-display font-semibold text-foreground group-hover:text-primary transition-colors">
+                              {ad.title}
+                            </h3>
+                            <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          {ad.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">{ad.description}</p>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Service Listings */}
             <MarketplaceListings 
