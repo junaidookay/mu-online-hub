@@ -25,6 +25,8 @@ const UpcomingServers = () => {
         .from('servers')
         .select('*')
         .eq('is_active', true)
+        .eq('slot_id', 6)
+        .not('open_date', 'is', null)
         .order('open_date', { ascending: true })
         .limit(10);
       
